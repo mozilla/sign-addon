@@ -1,0 +1,61 @@
+{
+  "name": "sign-addon",
+  "version": "0.0.1",
+  "description": "Signs a Firefox add-on using Mozilla's web service",
+  "main": "main/sign-addon.js",
+  "scripts": {
+    "build": "node -e \"require('grunt').cli()\" null build",
+    "start": "node -e \"require('grunt').cli()\" null develop",
+    "lint": "node -e \"require('grunt').cli()\" null lint",
+    "test": "node -e \"require('grunt').cli()\" null test"
+  },
+  "dependencies": {
+    "babel-polyfill": "6.6.1",
+    "deepcopy": "0.5.0",
+    "es6-error": "2.1.0",
+    "es6-promisify": "3.0.0",
+    "jsonwebtoken": "5.4.0",
+    "lodash": "3.10.1",
+    "lodash.merge": "3.3.2",
+    "mz": "2.3.1",
+    "request": "2.67.0",
+    "stream-to-promise": "1.1.0",
+    "when": "3.7.7"
+  },
+  "devDependencies": {
+    "babel-core": "6.7.0",
+    "babel-eslint": "5.0.0",
+    "babel-loader": "6.2.4",
+    "babel-plugin-transform-class-properties": "6.6.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "6.7.0",
+    "babel-plugin-transform-flow-strip-types": "6.7.0",
+    "babel-preset-es2015": "6.6.0",
+    "babel-preset-stage-2": "6.5.0",
+    "chai": "3.5.0",
+    "eslint": "2.2.0",
+    "grunt": "0.4.5",
+    "grunt-contrib-clean": "1.0.0",
+    "grunt-contrib-copy": "1.0.0",
+    "grunt-contrib-watch": "0.6.1",
+    "grunt-eslint": "18.0.0",
+    "grunt-mocha-test": "0.12.7",
+    "grunt-newer": "1.1.2",
+    "grunt-webpack": "1.0.11",
+    "load-grunt-configs": "0.4.3",
+    "load-grunt-tasks": "3.4.1",
+    "mocha": "2.4.5",
+    "sinon": "1.17.3",
+    "webpack": "1.12.14",
+    "webpack-dev-server": "1.14.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mozilla/sign-addon.git"
+  },
+  "author": "Kumar McMillan",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/mozilla/sign-addon/issues"
+  },
+  "homepage": "https://github.com/mozilla/sign-addon#readme"
+}
