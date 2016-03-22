@@ -2,10 +2,10 @@ import {beforeEach, describe, it} from "mocha";
 import path from "path";
 import _ from "lodash";
 import {expect} from "chai";
+import sinon from "sinon";
 import when from "when";
 
 import {signAddonAndExit} from "../src";
-import {CallableMock} from "./helpers";
 
 const testDir = path.resolve(__dirname);
 const fixturePath = path.join(testDir, "fixtures");
@@ -19,11 +19,11 @@ describe("sign", function() {
 
   beforeEach(function() {
     signingCall = null;
-    mockProcessExit = new CallableMock();
+    mockProcessExit = sinon.spy(() => {});
     mockProcess = {
-      exit: mockProcessExit.getCallable(),
+      exit: mockProcessExit,
     };
-    fakeClientContructor = new CallableMock();
+    fakeClientContructor = sinon.spy(() => {});
   });
 
   function makeAMOClientStub(options) {
@@ -33,20 +33,18 @@ describe("sign", function() {
     }, options);
 
     function FakeAMOClient() {
-      var constructor = fakeClientContructor.getCallable();
+      var constructor = fakeClientContructor;
       constructor.apply(constructor, arguments);
       this.debug = function() {};
     }
 
-    signingCall = new CallableMock({
-      returnValue: when.promise(function(resolve) {
-        if (options.errorToThrow) {
-          throw options.errorToThrow;
-        }
-        resolve(options.result);
-      }),
-    });
-    FakeAMOClient.prototype.sign = signingCall.getCallable();
+    signingCall = sinon.spy(() => when.promise((resolve) => {
+      if (options.errorToThrow) {
+        throw options.errorToThrow;
+      }
+      resolve(options.result);
+    }));
+    FakeAMOClient.prototype.sign = signingCall;
 
     return FakeAMOClient;
   }
@@ -79,8 +77,8 @@ describe("sign", function() {
 
   it("should exit 0 on signing success", function(done) {
     runSignCmd({throwError: false}).then(function() {
-      expect(signingCall.wasCalled).to.be.equal(true);
-      expect(mockProcessExit.call[0]).to.be.equal(0);
+      expect(signingCall.called).to.be.equal(true);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(0);
       done();
     }).catch(done);
   });
@@ -92,9 +90,10 @@ describe("sign", function() {
         version: "1.0.0",
       },
     }).then(function() {
-      expect(signingCall.wasCalled).to.be.equal(true);
-      expect(signingCall.call[0].version).to.be.equal("1.0.0");
-      expect(signingCall.call[0].guid).to.be.equal("@simple-addon");
+      expect(signingCall.called).to.be.equal(true);
+      expect(signingCall.firstCall.args[0].version).to.be.equal("1.0.0");
+      expect(signingCall.firstCall.args[0].guid)
+        .to.be.equal("@simple-addon");
       done();
     }).catch(done);
   });
@@ -106,7 +105,7 @@ describe("sign", function() {
         xpiPath: "/not/a/real/path.xpi",
       },
     }).then(function() {
-      expect(mockProcessExit.call[0]).to.be.equal(1);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
       done();
     }).catch(done);
   });
@@ -117,7 +116,8 @@ describe("sign", function() {
         verbose: true,
       },
     }).then(function() {
-      expect(fakeClientContructor.call[0].debugLogging).to.be.equal(true);
+      expect(fakeClientContructor.firstCall.args[0].debugLogging)
+        .to.be.equal(true);
       done();
     }).catch(done);
   });
@@ -128,8 +128,8 @@ describe("sign", function() {
         timeout: 5000,
       },
     }).then(function() {
-      expect(fakeClientContructor.wasCalled).to.be.equal(true);
-      expect(fakeClientContructor.call[0].signedStatusCheckTimeout)
+      expect(fakeClientContructor.called).to.be.equal(true);
+      expect(fakeClientContructor.firstCall.args[0].signedStatusCheckTimeout)
         .to.be.equal(5000);
       done();
     }).catch(done);
@@ -144,8 +144,8 @@ describe("sign", function() {
         xpiPath: xpiPath,
       },
     }).then(function() {
-      expect(signingCall.wasCalled).to.be.equal(true);
-      expect(signingCall.call[0].xpiPath).to.be.equal(xpiPath);
+      expect(signingCall.called).to.be.equal(true);
+      expect(signingCall.firstCall.args[0].xpiPath).to.be.equal(xpiPath);
       done();
     }).catch(done);
   });
@@ -157,7 +157,7 @@ describe("sign", function() {
         result: {success: false},
       }),
     }).then(function() {
-      expect(mockProcessExit.call[0]).to.be.equal(1);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
       done();
     }).catch(done);
   });
@@ -170,7 +170,7 @@ describe("sign", function() {
       },
       throwError: false,
     }).then(function() {
-      expect(mockProcessExit.call[0]).to.be.equal(1);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
       done();
     }).catch(done);
   });
@@ -182,7 +182,7 @@ describe("sign", function() {
       }),
       throwError: false,
     }).then(function() {
-      expect(mockProcessExit.call[0]).to.be.equal(1);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
       done();
     }).catch(done);
   });
@@ -195,8 +195,8 @@ describe("sign", function() {
       },
       throwError: false,
     }).then(function() {
-      expect(mockProcessExit.call[0]).to.be.equal(1);
-      expect(signingCall.wasCalled).to.be.equal(false);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
+      expect(signingCall.called).to.be.equal(false);
       done();
     }).catch(done);
   });
@@ -209,8 +209,8 @@ describe("sign", function() {
       },
       throwError: false,
     }).then(function() {
-      expect(mockProcessExit.call[0]).to.be.equal(1);
-      expect(signingCall.wasCalled).to.be.equal(false);
+      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
+      expect(signingCall.called).to.be.equal(false);
       done();
     }).catch(done);
   });

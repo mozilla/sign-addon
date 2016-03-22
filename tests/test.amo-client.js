@@ -3,11 +3,11 @@ import path from "path";
 import _ from "lodash";
 import merge from "lodash.merge";
 import {expect} from "chai";
+import sinon from "sinon";
 import jwt from "jsonwebtoken";
 import when from "when";
 
 import * as amoClient from "../src/amo-client";
-import {CallableMock} from "./helpers";
 
 
 describe("amoClient.Client", function() {
@@ -87,8 +87,8 @@ describe("amoClient.Client", function() {
         guid: "a-guid",
         version: "a-version",
       };
-      var waitForSignedAddon = new CallableMock();
-      this.client.waitForSignedAddon = waitForSignedAddon.getCallable();
+      var waitForSignedAddon = sinon.spy(() => {});
+      this.client.waitForSignedAddon = waitForSignedAddon;
 
       this.client._request = new MockRequest({
         httpResponse: {statusCode: 202},
@@ -107,16 +107,17 @@ describe("amoClient.Client", function() {
         expect(putCall.conf.url).to.include(partialUrl);
         expect(putCall.conf.formData.upload).to.be.equal("fake-read-stream");
 
-        expect(waitForSignedAddon.wasCalled).to.be.equal(true);
-        expect(waitForSignedAddon.call[0]).to.be.equal(apiStatusUrl);
+        expect(waitForSignedAddon.called).to.be.equal(true);
+        expect(waitForSignedAddon.firstCall.args[0])
+          .to.be.equal(apiStatusUrl);
 
         done();
       }).catch(done);
     });
 
     it("handles already validated add-ons", function(done) {
-      var waitForSignedAddon = new CallableMock();
-      this.client.waitForSignedAddon = waitForSignedAddon.getCallable();
+      var waitForSignedAddon = sinon.spy(() => {});
+      this.client.waitForSignedAddon = waitForSignedAddon;
 
       this.client._request = new MockRequest({
         httpResponse: {statusCode: 409},
@@ -124,7 +125,7 @@ describe("amoClient.Client", function() {
       });
 
       this.sign().then(function(result) {
-        expect(waitForSignedAddon.wasCalled).to.be.equal(false);
+        expect(waitForSignedAddon.called).to.be.equal(false);
         expect(result.success).to.be.equal(false);
         done();
       }).catch(done);
@@ -143,8 +144,8 @@ describe("amoClient.Client", function() {
 
     it("waits for passing validation", function(done) {
       var self = this;
-      var downloadSignedFiles = new CallableMock();
-      this.client.downloadSignedFiles = downloadSignedFiles.getCallable();
+      var downloadSignedFiles = sinon.spy(() => {});
+      this.client.downloadSignedFiles = downloadSignedFiles;
 
       var files = [{
         signed: true,
@@ -163,15 +164,16 @@ describe("amoClient.Client", function() {
         expect(self.client._request.calls.length).to.be.equal(2);
         expect(self.client._request.calls[0].conf.url).to.include(
           statusUrl);
-        expect(downloadSignedFiles.call[0]).to.be.deep.equal(files);
+        expect(downloadSignedFiles.firstCall.args[0])
+          .to.be.deep.equal(files);
         done();
       }).catch(done);
     });
 
     it("waits for for fully reviewed files", function(done) {
       var self = this;
-      var downloadSignedFiles = new CallableMock();
-      this.client.downloadSignedFiles = downloadSignedFiles.getCallable();
+      var downloadSignedFiles = sinon.spy(() => {});
+      this.client.downloadSignedFiles = downloadSignedFiles;
 
       this.client._request = new MockRequest({
         responseQueue: [
@@ -185,15 +187,15 @@ describe("amoClient.Client", function() {
       this.waitForSignedAddon().then(function() {
         // Expect exactly two GETs before resolution.
         expect(self.client._request.calls.length).to.be.equal(2);
-        expect(downloadSignedFiles.wasCalled).to.be.equal(true);
+        expect(downloadSignedFiles.called).to.be.equal(true);
         done();
       }).catch(done);
     });
 
     it("waits until signed files are ready", function(done) {
       var self = this;
-      var downloadSignedFiles = new CallableMock();
-      this.client.downloadSignedFiles = downloadSignedFiles.getCallable();
+      var downloadSignedFiles = sinon.spy(() => {});
+      this.client.downloadSignedFiles = downloadSignedFiles;
       this.client._request = new MockRequest({
         responseQueue: [
           signedResponse({files: []}),  // valid, but files aren"t ready yet
@@ -204,7 +206,7 @@ describe("amoClient.Client", function() {
       this.waitForSignedAddon().then(function() {
         // Expect exactly two GETs before resolution.
         expect(self.client._request.calls.length).to.be.equal(2);
-        expect(downloadSignedFiles.wasCalled).to.be.equal(true);
+        expect(downloadSignedFiles.called).to.be.equal(true);
         done();
       }).catch(done);
     });
@@ -243,10 +245,10 @@ describe("amoClient.Client", function() {
     });
 
     it("aborts validation check after timeout", function(done) {
-      var clearTimeout = new CallableMock();
+      var clearTimeout = sinon.spy(() => {});
 
       this.client.waitForSignedAddon("/status-url", {
-        clearTimeout: clearTimeout.getCallable(),
+        clearTimeout: clearTimeout,
         setStatusCheckTimeout: function() {
           return "status-check-timeout-id";
         },
@@ -255,20 +257,21 @@ describe("amoClient.Client", function() {
         done(new Error("Unexpected success"));
       }).catch(function(err) {
         expect(err.message).to.include("took too long");
-        expect(clearTimeout.call[0]).to.be.equal("status-check-timeout-id");
+        expect(clearTimeout.firstCall.args[0])
+          .to.be.equal("status-check-timeout-id");
         done();
       }).catch(done);
     });
 
     it("can configure signing status check timeout", function(done) {
-      var clearTimeout = new CallableMock();
+      var clearTimeout = sinon.stub();
       var client = this.newClient({
         // This should cause an immediate timeout.
         signedStatusCheckTimeout: 0,
       });
 
       client.waitForSignedAddon("/status-url", {
-        clearTimeout: clearTimeout.getCallable(),
+        clearTimeout: clearTimeout,
         setStatusCheckTimeout: function() {
           return "status-check-timeout-id";
         },
@@ -281,18 +284,18 @@ describe("amoClient.Client", function() {
     });
 
     it("clears abort timeout after resolution", function(done) {
-      var clearTimeout = new CallableMock();
+      var clearTimeout = sinon.spy(() => {});
       this.client._request = new MockRequest({
         responseQueue: [
           signedResponse(),
         ],
       });
 
-      var downloadSignedFiles = new CallableMock();
-      this.client.downloadSignedFiles = downloadSignedFiles.getCallable();
+      var downloadSignedFiles = sinon.spy(() => {});
+      this.client.downloadSignedFiles = downloadSignedFiles;
 
       this.waitForSignedAddon("/status-url/", {
-        clearTimeout: clearTimeout.getCallable(),
+        clearTimeout: clearTimeout,
         setAbortTimeout: function() {
           return "abort-timeout-id";
         },
@@ -301,9 +304,10 @@ describe("amoClient.Client", function() {
         },
       }).then(function() {
         // Assert that signing resolved successfully.
-        expect(downloadSignedFiles.wasCalled).to.be.equal(true);
+        expect(downloadSignedFiles.called).to.be.equal(true);
         // Assert that the timeout-to-abort was cleared.
-        expect(clearTimeout.call[0]).to.be.equal("abort-timeout-id");
+        expect(clearTimeout.firstCall.args[0])
+          .to.be.equal("abort-timeout-id");
         done();
       }).catch(done);
     });
@@ -329,12 +333,12 @@ describe("amoClient.Client", function() {
       };
 
       var files = signedResponse().responseBody.files;
-      var fakeRequest = new CallableMock({returnValue: fakeResponse});
-      var createWriteStream = new CallableMock({returnValue: fakeFileWriter});
+      var fakeRequest = sinon.spy(() => fakeResponse);
+      var createWriteStream = sinon.spy(() => fakeFileWriter);
 
       this.client.downloadSignedFiles(files, {
-        request: fakeRequest.getCallable(),
-        createWriteStream: createWriteStream.getCallable(),
+        request: fakeRequest,
+        createWriteStream: createWriteStream,
         stdout: {
           write: function() {},
         },
@@ -342,8 +346,9 @@ describe("amoClient.Client", function() {
         var filePath = path.join(process.cwd(), "some-signed-file-1.2.3.xpi");
         expect(result.success).to.be.equal(true);
         expect(result.downloadedFiles).to.be.deep.equal([filePath]);
-        expect(createWriteStream.call[0]).to.be.equal(filePath);
-        expect(fakeRequest.call[0].url).to.be.equal(files[0].download_url);
+        expect(createWriteStream.firstCall.args[0]).to.be.equal(filePath);
+        expect(fakeRequest.firstCall.args[0].url)
+          .to.be.equal(files[0].download_url);
         done();
       }).catch(done);
     });
@@ -356,12 +361,12 @@ describe("amoClient.Client", function() {
         return fileOb;
       });
 
-      var fakeRequest = new CallableMock();
-      var createWriteStream = new CallableMock();
+      var fakeRequest = sinon.spy(() => {});
+      var createWriteStream = sinon.spy(() => {});
 
       this.client.downloadSignedFiles(files, {
-        request: fakeRequest.getCallable(),
-        createWriteStream: createWriteStream.getCallable(),
+        request: fakeRequest,
+        createWriteStream: createWriteStream,
         stdout: {
           write: function() {},
         },
@@ -369,7 +374,7 @@ describe("amoClient.Client", function() {
         done(new Error("Unexpected success"));
       }).catch(function(err) {
         expect(err.message).to.match(/no signed files were found/);
-        expect(fakeRequest.wasCalled).to.be.equal(false);
+        expect(fakeRequest.called).to.be.equal(false);
         done();
       }).catch(done);
     });
@@ -400,12 +405,12 @@ describe("amoClient.Client", function() {
         download_url: "http://nope.org/should-not-be-downloaded.xpi",
       });
 
-      var fakeRequest = new CallableMock({returnValue: fakeResponse});
-      var createWriteStream = new CallableMock({returnValue: fakeFileWriter});
+      var fakeRequest = sinon.spy(() => fakeResponse);
+      var createWriteStream = sinon.spy(() => fakeFileWriter);
 
       this.client.downloadSignedFiles(files, {
-        request: fakeRequest.getCallable(),
-        createWriteStream: createWriteStream.getCallable(),
+        request: fakeRequest,
+        createWriteStream: createWriteStream,
         stdout: {
           write: function() {},
         },
@@ -413,8 +418,9 @@ describe("amoClient.Client", function() {
         var filePath = path.join(process.cwd(), "some-signed-file-1.2.3.xpi");
         expect(result.success).to.be.equal(true);
         expect(result.downloadedFiles).to.be.deep.equal([filePath]);
-        expect(fakeRequest.call.length).to.be.equal(files.length - 1);
-        expect(fakeRequest.call[0].url).to.be.equal(files[0].download_url);
+        expect(fakeRequest.callCount).to.be.equal(files.length - 1);
+        expect(fakeRequest.firstCall.args[0].url)
+          .to.be.equal(files[0].download_url);
         done();
       }).catch(done);
     });
@@ -431,12 +437,12 @@ describe("amoClient.Client", function() {
       };
 
       var files = signedResponse().responseBody.files;
-      var fakeRequest = new CallableMock({returnValue: fakeResponse});
-      var createWriteStream = new CallableMock();
+      var fakeRequest = sinon.spy(() => fakeResponse);
+      var createWriteStream = sinon.spy(() => {});
 
       this.client.downloadSignedFiles(files, {
-        request: fakeRequest.getCallable(),
-        createWriteStream: createWriteStream.getCallable(),
+        request: fakeRequest,
+        createWriteStream: createWriteStream,
         stdout: {
           write: function() {},
         },
@@ -455,9 +461,9 @@ describe("amoClient.Client", function() {
     var fakeLog;
 
     beforeEach(function() {
-      fakeDebug = new CallableMock();
+      fakeDebug = sinon.spy(() => {});
       fakeLog = {
-        debug: fakeDebug.getCallable(),
+        debug: fakeDebug,
       };
     });
 
@@ -467,8 +473,8 @@ describe("amoClient.Client", function() {
         logger: fakeLog,
       });
       cli.debug("first", "second");
-      expect(fakeDebug.call[0]).to.be.equal("first");
-      expect(fakeDebug.call[1]).to.be.equal("second");
+      expect(fakeDebug.firstCall.args[0]).to.be.equal("first");
+      expect(fakeDebug.firstCall.args[1]).to.be.equal("second");
     });
 
     it("hides debug output by default", function() {
@@ -476,7 +482,7 @@ describe("amoClient.Client", function() {
         logger: fakeLog,
       });
       cli.debug("first", "second");
-      expect(fakeDebug.wasCalled).to.be.equal(false);
+      expect(fakeDebug.called).to.be.equal(false);
     });
 
     it("redacts authorization headers", function() {
@@ -491,7 +497,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeDebug.call[1].request.headers.Authorization)
+      expect(fakeDebug.firstCall.args[1].request.headers.Authorization)
         .to.be.equal("<REDACTED>");
     });
 
@@ -507,7 +513,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeDebug.call[1].response.headers["set-cookie"])
+      expect(fakeDebug.firstCall.args[1].response.headers["set-cookie"])
         .to.be.equal("<REDACTED>");
     });
 
@@ -523,7 +529,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeDebug.call[1].request.headers.cookie)
+      expect(fakeDebug.firstCall.args[1].request.headers.cookie)
         .to.be.equal("<REDACTED>");
     });
 
@@ -798,14 +804,12 @@ describe("amoClient.getUrlBasename", function() {
 describe("amoClient.PseudoProgress", function() {
 
   beforeEach(function() {
-    this.setIntervalMock = new CallableMock({
-      returnValue: "interval-id",
-    });
-    this.clearIntervalMock = new CallableMock();
+    this.setIntervalMock = sinon.spy(() => "interval-id");
+    this.clearIntervalMock = sinon.spy(() => {});
 
     this.progress = new amoClient.PseudoProgress({
-      setInterval: this.setIntervalMock.getCallable(),
-      clearInterval: this.clearIntervalMock.getCallable(),
+      setInterval: this.setIntervalMock,
+      clearInterval: this.clearIntervalMock,
       stdout: {
         columns: 80,
         isTTY: true,
@@ -816,14 +820,15 @@ describe("amoClient.PseudoProgress", function() {
 
   it("should set an interval", function() {
     this.progress.animate();
-    expect(this.setIntervalMock.wasCalled).to.be.equal(true);
+    expect(this.setIntervalMock.called).to.be.equal(true);
   });
 
   it("should clear an interval", function() {
     this.progress.animate();
-    expect(this.setIntervalMock.wasCalled).to.be.equal(true);
+    expect(this.setIntervalMock.called).to.be.equal(true);
     this.progress.finish();
-    expect(this.clearIntervalMock.call[0]).to.be.equal("interval-id");
+    expect(this.clearIntervalMock.firstCall.args[0])
+      .to.be.equal("interval-id");
   });
 });
 
