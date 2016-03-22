@@ -1,5 +1,3 @@
-import _ from "lodash";
-import merge from "lodash.merge";
 import deepcopy from "deepcopy";
 import fs from "fs";
 import url from "url";
@@ -24,14 +22,13 @@ import nodefn from "when/node";
  */
 export class Client {
   constructor(conf) {
-    conf = merge({
+    conf = {
       debugLogging: false,
       signedStatusCheckInterval: 1000,
       signedStatusCheckTimeout: 120000,  // 2 minutes.
-      // For some reason, merge won't let us replace logger methods
-      // (for testing) unless it's a plain object:
-      logger: _.assign({}, console),
-    }, conf);
+      logger: console,
+      ...conf,
+    };
     this.apiKey = conf.apiKey;
     this.apiSecret = conf.apiSecret;
     this.apiUrlPrefix = conf.apiUrlPrefix;  // default set in CLI options.
@@ -105,12 +102,13 @@ export class Client {
     var self = this;
     var lastStatusResponse;
 
-    opt = _.assign({
+    opt = {
       clearTimeout: clearTimeout,
       setAbortTimeout: setTimeout,
       setStatusCheckTimeout: setTimeout,
       abortAfter: self.signedStatusCheckTimeout,
-    }, opt);
+      ...opt,
+    };
 
     return when.promise(function(resolve, reject) {
       self._validateProgress.animate();
@@ -193,11 +191,12 @@ export class Client {
    * @return {Promise}
    */
   downloadSignedFiles(signedFiles, options) {
-    options = _.assign({
+    options = {
       createWriteStream: fs.createWriteStream,
       request: this._request,
       stdout: process.stdout,
-    }, options);
+      ...options,
+    };
     var self = this;
     var allDownloads = [];
     var dataExpected = null;
@@ -372,7 +371,7 @@ export class Client {
    *                  for `request(conf)`, `request.get(conf)`, etc.
    */
   configureRequest(requestConf) {
-    requestConf = _.assign({}, requestConf);
+    requestConf = {...requestConf};
     if (!requestConf.url) {
       throw new Error("request URL was not specified");
     }
@@ -383,10 +382,11 @@ export class Client {
       expiresIn: 60,
     });
 
-    requestConf.headers = _.assign({
+    requestConf.headers = {
       Authorization: "JWT " + authToken,
       Accept: "application/json",
-    }, requestConf.headers);
+      ...requestConf.headers,
+    };
 
     return requestConf;
   }
@@ -415,9 +415,10 @@ export class Client {
       requestConf = self.configureRequest(requestConf);
       self.debug("[API] ->", requestConf);
 
-      options = _.assign({
+      options = {
         throwOnBadResponse: true,
-      }, options);
+        ...options,
+      };
 
       // Get the caller, like request.get(), request.put() ...
       var requestMethod = self._request[method].bind(self._request);
@@ -508,12 +509,13 @@ export class Client {
  */
 export class PseudoProgress {
   constructor(conf) {
-    conf = _.assign({
+    conf = {
       preamble: "",
       setInterval: setInterval,
       clearInterval: clearInterval,
       stdout: process.stdout,
-    }, conf);
+      ...conf,
+    };
 
     this.bucket = [];
     this.interval = null;
@@ -540,9 +542,10 @@ export class PseudoProgress {
   }
 
   animate(conf) {
-    conf = _.assign({
+    conf = {
       speed: 100,
-    }, conf);
+      ...conf,
+    };
     var self = this;
     var bucketIsFull = false;
     this.interval = this.setInterval(function() {
@@ -612,9 +615,10 @@ export class PseudoProgress {
  * This makes the response suitable for logging.
  * */
 export function formatResponse(response, options) {
-  options = _.assign({
+  options = {
     maxLength: 500,
-  }, options);
+    ...options,
+  };
   var prettyResponse = response;
   if (typeof prettyResponse === "object") {
     try {

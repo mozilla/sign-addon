@@ -1,6 +1,5 @@
 import {beforeEach, describe, it} from "mocha";
 import path from "path";
-import _ from "lodash";
 import {expect} from "chai";
 import sinon from "sinon";
 import when from "when";
@@ -27,10 +26,11 @@ describe("sign", function() {
   });
 
   function makeAMOClientStub(options) {
-    options = _.assign({
+    options = {
       errorToThrow: null,
       result: {success: true},
-    }, options);
+      ...options,
+    };
 
     function FakeAMOClient() {
       var constructor = fakeClientContructor;
@@ -50,11 +50,12 @@ describe("sign", function() {
   }
 
   function runSignCmd(options) {
-    options = _.assign({
+    options = {
       throwError: true,
       StubAMOClient: makeAMOClientStub(),
       cmdOptions: {},
-    }, options);
+      ...options,
+    };
 
     var cmdOptions = {
       apiKey: "some-key",

@@ -1,7 +1,5 @@
 import {beforeEach, describe, it} from "mocha";
 import path from "path";
-import _ from "lodash";
-import merge from "lodash.merge";
 import {expect} from "chai";
 import sinon from "sinon";
 import jwt from "jsonwebtoken";
@@ -18,7 +16,7 @@ describe("amoClient.Client", function() {
     this.apiUrlPrefix = "http://not-a-real-amo-api.com/api/v3";
 
     this.newClient = function(opt) {
-      opt = merge({
+      opt = {
         apiKey: "fake-api-key",
         apiSecret: "fake-api-secret",
         apiUrlPrefix: self.apiUrlPrefix,
@@ -30,7 +28,8 @@ describe("amoClient.Client", function() {
         },
         request: new MockRequest(),
         validateProgress: new MockProgress(),
-      }, opt);
+        ...opt,
+      };
       return new amoClient.Client(opt);
     };
 
@@ -44,26 +43,28 @@ describe("amoClient.Client", function() {
       var self = this;
 
       this.sign = function(conf) {
-        conf = _.assign({}, {
+        conf = {
           guid: "some-guid",
           version: "some-version",
           xpiPath: "some-xpi-path",
-        }, conf);
+          ...conf,
+        };
         return self.client.sign(conf);
       };
 
       this.waitForSignedAddon = function(url, options) {
         url = url || "/some-status-url";
-        options = _.assign({
-          setAbortTimeout: function() {},
-        }, options);
+        options = {
+          setAbortTimeout: () => {},
+          ...options,
+        };
         return self.client.waitForSignedAddon(url, options);
       };
 
     });
 
     function signedResponse(overrides) {
-      var res = _.assign({
+      var res = {
         active: true,
         processed: true,
         valid: true,
@@ -73,7 +74,8 @@ describe("amoClient.Client", function() {
           download_url: "http://amo/some-signed-file-1.2.3.xpi",
         }],
         validation_url: "http://amo/validation-results/",
-      }, overrides);
+        ...overrides,
+      };
 
       return {
         responseBody: res,
@@ -848,11 +850,12 @@ class MockRequest {
       responseBody: "",
       responseError: null,
     };
-    conf = _.assign({
+    conf = {
       // By default, responses will not be queued.
       // I.E. the same response will be returned repeatedly.
       responseQueue: false,
-    }, conf);
+      ...conf,
+    };
 
     this.responseQueue = conf.responseQueue;
     this.returnMultipleResponses = !!this.responseQueue;
@@ -864,8 +867,8 @@ class MockRequest {
     }
 
     // Make sure each queued response has the default values.
-    this.responseQueue.forEach(function(response, i) {
-      self.responseQueue[i] = _.assign({}, defaultResponse, response);
+    this.responseQueue.forEach((response, i) => {
+      self.responseQueue[i] = {...defaultResponse, ...response};
     });
 
     this.calls = [];
@@ -877,9 +880,8 @@ class MockRequest {
 
   _mockRequest(method, conf, callback) {
     var info = {conf: conf};
-    this.calls.push(_.assign({}, info, {name: method}));
+    this.calls.push({...info, name: method});
     this.callMap[method] = info;
-    //console.log("MockRequest:", method, conf.url);
 
     var response;
     if (this.returnMultipleResponses) {
