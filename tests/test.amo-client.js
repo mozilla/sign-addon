@@ -833,83 +833,86 @@ describe("amoClient.PseudoProgress", function() {
 });
 
 
-function MockProgress() {}
-
-MockProgress.prototype.animate = function() {};
-MockProgress.prototype.finish = function() {};
-
-
-function MockRequest(conf) {
-  var self = this;
-  var defaultResponse = {
-    httpResponse: {statusCode: 200},
-    responseBody: "",
-    responseError: null,
-  };
-  conf = _.assign({
-    // By default, responses will not be queued.
-    // I.E. the same response will be returned repeatedly.
-    responseQueue: false,
-  }, conf);
-
-  this.responseQueue = conf.responseQueue;
-  this.returnMultipleResponses = !!this.responseQueue;
-
-  if (!this.returnMultipleResponses) {
-    // If the caller did not queue some responses then assume all
-    // configuration should apply to the response.
-    this.responseQueue = [conf];
-  }
-
-  // Make sure each queued response has the default values.
-  this.responseQueue.forEach(function(response, i) {
-    self.responseQueue[i] = _.assign({}, defaultResponse, response);
-  });
-
-  this.calls = [];
-  this.callMap = {};
-  this.httpResponse = conf.httpResponse;
-  this.responseBody = conf.responseBody;
-  this.responseError = conf.responseError;
+class MockProgress {
+  animate() {}
+  finish() {}
 }
 
-MockRequest.prototype._mockRequest = function(method, conf, callback) {
-  var info = {conf: conf};
-  this.calls.push(_.assign({}, info, {name: method}));
-  this.callMap[method] = info;
-  //console.log("MockRequest:", method, conf.url);
 
-  var response;
-  if (this.returnMultipleResponses) {
-    response = this.responseQueue.shift();
-  } else {
-    // Always return the same response.
-    response = this.responseQueue[0];
+class MockRequest {
+
+  constructor(conf) {
+    var self = this;
+    var defaultResponse = {
+      httpResponse: {statusCode: 200},
+      responseBody: "",
+      responseError: null,
+    };
+    conf = _.assign({
+      // By default, responses will not be queued.
+      // I.E. the same response will be returned repeatedly.
+      responseQueue: false,
+    }, conf);
+
+    this.responseQueue = conf.responseQueue;
+    this.returnMultipleResponses = !!this.responseQueue;
+
+    if (!this.returnMultipleResponses) {
+      // If the caller did not queue some responses then assume all
+      // configuration should apply to the response.
+      this.responseQueue = [conf];
+    }
+
+    // Make sure each queued response has the default values.
+    this.responseQueue.forEach(function(response, i) {
+      self.responseQueue[i] = _.assign({}, defaultResponse, response);
+    });
+
+    this.calls = [];
+    this.callMap = {};
+    this.httpResponse = conf.httpResponse;
+    this.responseBody = conf.responseBody;
+    this.responseError = conf.responseError;
   }
-  if (!response) {
-    response = {};
-    response.responseError = new Error("Response queue is empty");
+
+  _mockRequest(method, conf, callback) {
+    var info = {conf: conf};
+    this.calls.push(_.assign({}, info, {name: method}));
+    this.callMap[method] = info;
+    //console.log("MockRequest:", method, conf.url);
+
+    var response;
+    if (this.returnMultipleResponses) {
+      response = this.responseQueue.shift();
+    } else {
+      // Always return the same response.
+      response = this.responseQueue[0];
+    }
+    if (!response) {
+      response = {};
+      response.responseError = new Error("Response queue is empty");
+    }
+    callback(response.responseError, response.httpResponse,
+             response.responseBody);
   }
-  callback(response.responseError, response.httpResponse,
-           response.responseBody);
-};
 
-MockRequest.prototype.get = function(conf, callback) {
-  return this._mockRequest("get", conf, callback);
-};
+  get(conf, callback) {
+    return this._mockRequest("get", conf, callback);
+  }
 
-MockRequest.prototype.post = function(conf, callback) {
-  return this._mockRequest("post", conf, callback);
-};
+  post(conf, callback) {
+    return this._mockRequest("post", conf, callback);
+  }
 
-MockRequest.prototype.put = function(conf, callback) {
-  return this._mockRequest("put", conf, callback);
-};
+  put(conf, callback) {
+    return this._mockRequest("put", conf, callback);
+  }
 
-MockRequest.prototype.patch = function(conf, callback) {
-  return this._mockRequest("patch", conf, callback);
-};
+  patch(conf, callback) {
+    return this._mockRequest("patch", conf, callback);
+  }
 
-MockRequest.prototype.delete = function(conf, callback) {
-  return this._mockRequest("delete", conf, callback);
-};
+  delete(conf, callback) {
+    return this._mockRequest("delete", conf, callback);
+  }
+}
