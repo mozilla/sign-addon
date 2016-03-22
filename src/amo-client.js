@@ -1,11 +1,14 @@
 import deepcopy from "deepcopy";
-import fs from "fs";
+import {default as defaultFs} from "fs";
 import url from "url";
 import path from "path";
 import jwt from "jsonwebtoken";
-import request from "request";
+import {default as defaultRequest} from "request";
 import when from "when";
 import nodefn from "when/node";
+
+const defaultSetInterval = setInterval;
+const defaultClearInterval = clearInterval;
 
 /**
  * Construct a new addons.mozilla.org API client.
@@ -21,28 +24,30 @@ import nodefn from "when/node";
  *   - `debugLogging`: When true, log more information
  */
 export class Client {
-  constructor(conf) {
-    conf = {
-      debugLogging: false,
-      signedStatusCheckInterval: 1000,
-      signedStatusCheckTimeout: 120000,  // 2 minutes.
-      logger: console,
-      ...conf,
-    };
-    this.apiKey = conf.apiKey;
-    this.apiSecret = conf.apiSecret;
-    this.apiUrlPrefix = conf.apiUrlPrefix;  // default set in CLI options.
-    this.signedStatusCheckInterval = conf.signedStatusCheckInterval;
-    this.signedStatusCheckTimeout = conf.signedStatusCheckTimeout;
-    this.debugLogging = conf.debugLogging;
-    this.logger = conf.logger;
+  constructor({apiKey,
+               apiSecret,
+               apiUrlPrefix,
+               debugLogging=false,
+               signedStatusCheckInterval=1000,
+               signedStatusCheckTimeout=120000,  // 2 minutes.
+               logger=console,
+               fs=defaultFs,
+               request=defaultRequest,
+               validateProgress}) {
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+    this.apiUrlPrefix = apiUrlPrefix;  // default set in CLI options.
+    this.signedStatusCheckInterval = signedStatusCheckInterval;
+    this.signedStatusCheckTimeout = signedStatusCheckTimeout;
+    this.debugLogging = debugLogging;
+    this.logger = logger;
 
     // Set up external dependencies, allowing for overrides.
-    this._validateProgress = conf.validateProgress || new PseudoProgress({
+    this._validateProgress = validateProgress || new PseudoProgress({
       preamble: "Validating add-on",
     });
-    this._fs = conf.fs || fs;
-    this._request = conf.request || request;
+    this._fs = fs;
+    this._request = request;
   }
 
   /**
@@ -54,17 +59,16 @@ export class Client {
    *   - `version` add-on version string.
    * @return {Promise}
    */
-  sign(conf) {
+  sign({guid, version, xpiPath}) {
     var self = this;
-    conf = conf || {};
 
-    var addonUrl = "/addons/" + encodeURIComponent(conf.guid);
-    addonUrl += "/versions/" + encodeURIComponent(conf.version) + "/";
+    var addonUrl = "/addons/" + encodeURIComponent(guid);
+    addonUrl += "/versions/" + encodeURIComponent(version) + "/";
 
     return this.put({
       url: addonUrl,
       formData: {
-        upload: this._fs.createReadStream(conf.xpiPath),
+        upload: this._fs.createReadStream(xpiPath),
       },
     }, {
       throwOnBadResponse: false,
@@ -190,13 +194,13 @@ export class Client {
    *                  - `download_url` - the URL to the file
    * @return {Promise}
    */
-  downloadSignedFiles(signedFiles, options) {
-    options = {
-      createWriteStream: fs.createWriteStream,
-      request: this._request,
-      stdout: process.stdout,
-      ...options,
-    };
+  downloadSignedFiles(signedFiles,
+                      {createWriteStream=defaultFs.createWriteStream,
+                       request,
+                       stdout=process.stdout}) {
+    if (!request) {
+      request = this._request;
+    }
     var self = this;
     var allDownloads = [];
     var dataExpected = null;
@@ -216,7 +220,7 @@ export class Client {
         }
         progress = padding + amount + "% ";
       }
-      options.stdout.write("\r" +
+      stdout.write("\r" +
           "Downloading signed files: " + progress);
     }
 
@@ -224,9 +228,9 @@ export class Client {
       return when.promise(function(resolve, reject) {
         // The API will give us a signed file named in a sane way.
         var fileName = path.join(process.cwd(), getUrlBasename(fileUrl));
-        var out = options.createWriteStream(fileName);
+        var out = createWriteStream(fileName);
 
-        options.request(self.configureRequest({
+        request(self.configureRequest({
             method: "GET",
             url: fileUrl,
             followRedirect: true,
@@ -246,7 +250,7 @@ export class Client {
           .on("error", reject);
 
         out.on("finish", function() {
-          options.stdout.write("\n");  // end the progress output
+          stdout.write("\n");  // end the progress output
           resolve(fileName);
         });
       });
@@ -298,8 +302,7 @@ export class Client {
    * @return {Promise}
    */
   get() {
-    return this.request.apply(
-      this, ["get"].concat(Array.prototype.slice.call(arguments)));
+    return this.request("get", ...arguments);
   }
 
   /**
@@ -310,8 +313,7 @@ export class Client {
    * @return {Promise}
    */
   post() {
-    return this.request.apply(
-      this, ["post"].concat(Array.prototype.slice.call(arguments)));
+    return this.request("post", ...arguments);
   }
 
   /**
@@ -322,8 +324,7 @@ export class Client {
    * @return {Promise}
    */
   put() {
-    return this.request.apply(
-      this, ["put"].concat(Array.prototype.slice.call(arguments)));
+    return this.request("put", ...arguments);
   }
 
   /**
@@ -334,8 +335,7 @@ export class Client {
    * @return {Promise}
    */
   patch() {
-    return this.request.apply(
-      this, ["patch"].concat(Array.prototype.slice.call(arguments)));
+    return this.request("patch", ...arguments);
   }
 
   /**
@@ -346,8 +346,7 @@ export class Client {
    * @return {Promise}
    */
   delete() {
-    return this.request.apply(
-      this, ["delete"].concat(Array.prototype.slice.call(arguments)));
+    return this.request("delete", ...arguments);
   }
 
   /**
@@ -408,17 +407,12 @@ export class Client {
    *
    * @return {Promise}
    */
-  request(method, requestConf, options) {
+  request(method, requestConf, {throwOnBadResponse=true} = {}) {
     method = method.toLowerCase();
     var self = this;
     return when.promise(function(resolve) {
       requestConf = self.configureRequest(requestConf);
       self.debug("[API] ->", requestConf);
-
-      options = {
-        throwOnBadResponse: true,
-        ...options,
-      };
 
       // Get the caller, like request.get(), request.put() ...
       var requestMethod = self._request[method].bind(self._request);
@@ -435,7 +429,7 @@ export class Client {
       var httpResponse = responseResult[0];
       var body = responseResult[1];
 
-      if (options.throwOnBadResponse) {
+      if (throwOnBadResponse) {
         if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
           throw new Error(
             "Received bad response from " +
@@ -495,7 +489,7 @@ export class Client {
       }
       return val;
     });
-    this.logger.debug.apply(this.logger, args);
+    this.logger.debug(...args);
   }
 }
 
@@ -508,25 +502,21 @@ export class Client {
  * randomly getting filled in.
  */
 export class PseudoProgress {
-  constructor(conf) {
-    conf = {
-      preamble: "",
-      setInterval: setInterval,
-      clearInterval: clearInterval,
-      stdout: process.stdout,
-      ...conf,
-    };
+  constructor({preamble="",
+               setInterval=defaultSetInterval,
+               clearInterval=defaultClearInterval,
+               stdout=process.stdout}) {
 
     this.bucket = [];
     this.interval = null;
     this.motionCounter = 1;
 
-    this.preamble = conf.preamble;
+    this.preamble = preamble;
     this.preamble += " [";
     this.addendum = "]";
-    this.setInterval = conf.setInterval;
-    this.clearInterval = conf.clearInterval;
-    this.stdout = conf.stdout;
+    this.setInterval = setInterval;
+    this.clearInterval = clearInterval;
+    this.stdout = stdout;
 
     var shellWidth = 80;
     if (this.stdout.isTTY) {
