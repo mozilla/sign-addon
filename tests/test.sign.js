@@ -76,16 +76,15 @@ describe("sign", function() {
     return signAddonAndExit(cmdOptions, cmdConfig);
   }
 
-  it("should exit 0 on signing success", function(done) {
-    runSignCmd({throwError: false}).then(function() {
+  it("should exit 0 on signing success", () => {
+    return runSignCmd({throwError: false}).then(function() {
       expect(signingCall.called).to.be.equal(true);
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(0);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("passes id/version to the signer", function(done) {
-    runSignCmd({
+  it("passes id/version to the signer", () => {
+    return runSignCmd({
       cmdOptions: {
         id: "@simple-addon",
         version: "1.0.0",
@@ -95,23 +94,21 @@ describe("sign", function() {
       expect(signingCall.firstCall.args[0].version).to.be.equal("1.0.0");
       expect(signingCall.firstCall.args[0].guid)
         .to.be.equal("@simple-addon");
-      done();
-    }).catch(done);
+    });
   });
 
-  it("throws an error for XPI file errors", function(done) {
-    runSignCmd({
+  it("throws an error for XPI file errors", () => {
+    return runSignCmd({
       throwError: false,
       cmdOptions: {
         xpiPath: "/not/a/real/path.xpi",
       },
     }).then(function() {
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("can turn on debug logging", function(done) {
+  it("can turn on debug logging", () => {
     runSignCmd({
       cmdOptions: {
         verbose: true,
@@ -119,12 +116,11 @@ describe("sign", function() {
     }).then(function() {
       expect(fakeClientContructor.firstCall.args[0].debugLogging)
         .to.be.equal(true);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("can configure polling timeouts", function(done) {
-    runSignCmd({
+  it("can configure polling timeouts", () => {
+    return runSignCmd({
       cmdOptions: {
         timeout: 5000,
       },
@@ -132,13 +128,12 @@ describe("sign", function() {
       expect(fakeClientContructor.called).to.be.equal(true);
       expect(fakeClientContructor.firstCall.args[0].signedStatusCheckTimeout)
         .to.be.equal(5000);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("passes custom XPI to the signer", function(done) {
+  it("passes custom XPI to the signer", () => {
     let xpiPath = path.join(fixturePath, "simple-addon.xpi");
-    runSignCmd({
+    return runSignCmd({
       cmdOptions: {
         id: "some-id",
         version: "0.0.1",
@@ -147,72 +142,91 @@ describe("sign", function() {
     }).then(function() {
       expect(signingCall.called).to.be.equal(true);
       expect(signingCall.firstCall.args[0].xpiPath).to.be.equal(xpiPath);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("should exit 1 on signing failure", function(done) {
-    runSignCmd({
+  it("should exit 1 on signing failure", () => {
+    return runSignCmd({
       throwError: false,
       StubAMOClient: makeAMOClientStub({
         result: {success: false},
       }),
     }).then(function() {
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("exits 1 when id/version cannot be detected", function(done) {
-    runSignCmd({
-      cmdOptions: {
-        id: null,
-        version: null,
-      },
-      throwError: false,
-    }).then(function() {
-      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
-      done();
-    }).catch(done);
-  });
-
-  it("should exit 1 on exception", function(done) {
-    runSignCmd({
+  it("should exit 1 on exception", () => {
+    return runSignCmd({
       StubAMOClient: makeAMOClientStub({
         errorToThrow: new Error("some signing error"),
       }),
       throwError: false,
     }).then(function() {
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
-      done();
-    }).catch(done);
+    });
   });
 
-  it("should exit early for missing --api-key", function(done) {
-    runSignCmd({
+  it("should throw error when id is empty", () => {
+    return runSignCmd({
+      cmdOptions: {
+        id: null,
+        version: "0.0.1",
+      },
+    }).then(() => {
+      throw new Error("unexpected success");
+    }).catch((error) => {
+      expect(error.message).to.match(/argument was empty: id/);
+    });
+  });
+
+  it("should throw error when version is empty", () => {
+    return runSignCmd({
+      cmdOptions: {
+        id: "some-addon@somewhere",
+        version: null,
+      },
+    }).then(() => {
+      throw new Error("unexpected success");
+    }).catch((error) => {
+      expect(error.message).to.match(/argument was empty: version/);
+    });
+  });
+
+  it("should throw error when xpiPath is empty", () => {
+    return runSignCmd({
+      cmdOptions: {
+        xpiPath: null,
+      },
+    }).then(() => {
+      throw new Error("unexpected success");
+    }).catch((error) => {
+      expect(error.message).to.match(/argument was empty: xpiPath/);
+    });
+  });
+
+  it("should throw error when apiKey is empty", () => {
+    return runSignCmd({
       cmdOptions: {
         apiKey: null,
-        apiSecret: "secret",
       },
-      throwError: false,
-    }).then(function() {
-      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
-      expect(signingCall.called).to.be.equal(false);
-      done();
-    }).catch(done);
+    }).then(() => {
+      throw new Error("unexpected success");
+    }).catch((error) => {
+      expect(error.message).to.match(/argument was empty: apiKey/);
+    });
   });
 
-  it("should exit early for missing --api-secret", function(done) {
-    runSignCmd({
+  it("should throw error when apiSecret is empty", () => {
+    return runSignCmd({
       cmdOptions: {
-        apiKey: "some-key",
         apiSecret: null,
       },
-      throwError: false,
-    }).then(function() {
-      expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
-      expect(signingCall.called).to.be.equal(false);
-      done();
-    }).catch(done);
+    }).then(() => {
+      throw new Error("unexpected success");
+    }).catch((error) => {
+      expect(error.message).to.match(/argument was empty: apiSecret/);
+    });
   });
+
 });
