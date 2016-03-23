@@ -38,6 +38,9 @@ signAddon(
     version: '0.0.1',
     apiKey: 'Your JWT issuer',
     apiSecret: 'Your JWT secret',
+    // Optional: number of milleseconds to wait before aborting the request.
+    // Default: 2 minutes.
+    timeout: undefined,
   })
   .then((result) => {
     if (result.success) {
