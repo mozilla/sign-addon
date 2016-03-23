@@ -82,7 +82,7 @@ describe("amoClient.Client", function() {
       };
     }
 
-    it("lets you sign an add-on", function(done) {
+    it("lets you sign an add-on", function() {
       var self = this;
       var apiStatusUrl = "https://api/addon/version/upload/abc123";
       var conf = {
@@ -101,7 +101,7 @@ describe("amoClient.Client", function() {
         },
       });
 
-      this.sign(conf).then(function() {
+      return this.sign(conf).then(function() {
         var putCall = self.client._request.calls[0];
         expect(putCall.name).to.be.equal("put");
 
@@ -112,12 +112,10 @@ describe("amoClient.Client", function() {
         expect(waitForSignedAddon.called).to.be.equal(true);
         expect(waitForSignedAddon.firstCall.args[0])
           .to.be.equal(apiStatusUrl);
-
-        done();
-      }).catch(done);
+      });
     });
 
-    it("handles already validated add-ons", function(done) {
+    it("handles already validated add-ons", function() {
       var waitForSignedAddon = sinon.spy(() => {});
       this.client.waitForSignedAddon = waitForSignedAddon;
 
@@ -126,25 +124,23 @@ describe("amoClient.Client", function() {
         responseBody: {error: "version already exists"},
       });
 
-      this.sign().then(function(result) {
+      return this.sign().then(function(result) {
         expect(waitForSignedAddon.called).to.be.equal(false);
         expect(result.success).to.be.equal(false);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("throws an error when signing on a 500 server response", function(done) {
+    it("throws an error when signing on a 500 server response", function() {
       this.client._request = new MockRequest({httpResponse: {statusCode: 500}});
 
-      this.sign().then(function() {
-        done(new Error("unexpected success"));
+      return this.sign().then(function() {
+        throw new Error("unexpected success");
       }).catch(function(err) {
         expect(err.message).to.include("Received bad response");
-        done();
-      }).catch(done);
+      });
     });
 
-    it("waits for passing validation", function(done) {
+    it("waits for passing validation", function() {
       var self = this;
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
@@ -161,18 +157,17 @@ describe("amoClient.Client", function() {
       });
 
       var statusUrl = "/addons/something/versions/1.2.3/";
-      this.waitForSignedAddon(statusUrl).then(function() {
+      return this.waitForSignedAddon(statusUrl).then(function() {
         // Expect exactly two GETs before resolution.
         expect(self.client._request.calls.length).to.be.equal(2);
         expect(self.client._request.calls[0].conf.url).to.include(
           statusUrl);
         expect(downloadSignedFiles.firstCall.args[0])
           .to.be.deep.equal(files);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("waits for for fully reviewed files", function(done) {
+    it("waits for for fully reviewed files", function() {
       var self = this;
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
@@ -186,15 +181,14 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      this.waitForSignedAddon().then(function() {
+      return this.waitForSignedAddon().then(function() {
         // Expect exactly two GETs before resolution.
         expect(self.client._request.calls.length).to.be.equal(2);
         expect(downloadSignedFiles.called).to.be.equal(true);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("waits until signed files are ready", function(done) {
+    it("waits until signed files are ready", function() {
       var self = this;
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
@@ -205,15 +199,14 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      this.waitForSignedAddon().then(function() {
+      return this.waitForSignedAddon().then(function() {
         // Expect exactly two GETs before resolution.
         expect(self.client._request.calls.length).to.be.equal(2);
         expect(downloadSignedFiles.called).to.be.equal(true);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("waits for failing validation", function(done) {
+    it("waits for failing validation", function() {
       var self = this;
       this.client._request = new MockRequest({
         responseQueue: [
@@ -222,15 +215,14 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      this.waitForSignedAddon().then(function(result) {
+      return this.waitForSignedAddon().then(function(result) {
         // Expect exactly two GETs before resolution.
         expect(self.client._request.calls.length).to.be.equal(2);
         expect(result.success).to.be.equal(false);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("handles complete yet inactive addons", function(done) {
+    it("handles complete yet inactive addons", function() {
       this.client._request = new MockRequest({
         responseQueue: [
           signedResponse({
@@ -240,52 +232,49 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      this.waitForSignedAddon().then(function(result) {
+      return this.waitForSignedAddon().then(function(result) {
         expect(result.success).to.be.equal(false);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("aborts validation check after timeout", function(done) {
+    it("aborts validation check after timeout", function() {
       var clearTimeout = sinon.spy(() => {});
 
-      this.client.waitForSignedAddon("/status-url", {
+      return this.client.waitForSignedAddon("/status-url", {
         clearTimeout: clearTimeout,
         setStatusCheckTimeout: function() {
           return "status-check-timeout-id";
         },
         abortAfter: 0,
       }).then(function() {
-        done(new Error("Unexpected success"));
+        throw new Error("Unexpected success");
       }).catch(function(err) {
         expect(err.message).to.include("took too long");
         expect(clearTimeout.firstCall.args[0])
           .to.be.equal("status-check-timeout-id");
-        done();
-      }).catch(done);
+      });
     });
 
-    it("can configure signing status check timeout", function(done) {
+    it("can configure signing status check timeout", function() {
       var clearTimeout = sinon.stub();
       var client = this.newClient({
         // This should cause an immediate timeout.
         signedStatusCheckTimeout: 0,
       });
 
-      client.waitForSignedAddon("/status-url", {
+      return client.waitForSignedAddon("/status-url", {
         clearTimeout: clearTimeout,
         setStatusCheckTimeout: function() {
           return "status-check-timeout-id";
         },
       }).then(function() {
-        done(new Error("Unexpected success"));
+        throw new Error("Unexpected success");
       }).catch(function(err) {
         expect(err.message).to.include("took too long");
-        done();
-      }).catch(done);
+      });
     });
 
-    it("clears abort timeout after resolution", function(done) {
+    it("clears abort timeout after resolution", function() {
       var clearTimeout = sinon.spy(() => {});
       this.client._request = new MockRequest({
         responseQueue: [
@@ -296,7 +285,7 @@ describe("amoClient.Client", function() {
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
 
-      this.waitForSignedAddon("/status-url/", {
+      return this.waitForSignedAddon("/status-url/", {
         clearTimeout: clearTimeout,
         setAbortTimeout: function() {
           return "abort-timeout-id";
@@ -310,11 +299,10 @@ describe("amoClient.Client", function() {
         // Assert that the timeout-to-abort was cleared.
         expect(clearTimeout.firstCall.args[0])
           .to.be.equal("abort-timeout-id");
-        done();
-      }).catch(done);
+      });
     });
 
-    it("downloads signed files", function(done) {
+    it("downloads signed files", function() {
       var fakeResponse = {
         on: function() {
           return this;
@@ -338,7 +326,7 @@ describe("amoClient.Client", function() {
       var fakeRequest = sinon.spy(() => fakeResponse);
       var createWriteStream = sinon.spy(() => fakeFileWriter);
 
-      this.client.downloadSignedFiles(files, {
+      return this.client.downloadSignedFiles(files, {
         request: fakeRequest,
         createWriteStream: createWriteStream,
         stdout: {
@@ -351,11 +339,10 @@ describe("amoClient.Client", function() {
         expect(createWriteStream.firstCall.args[0]).to.be.equal(filePath);
         expect(fakeRequest.firstCall.args[0].url)
           .to.be.equal(files[0].download_url);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("fails for unsigned files", function(done) {
+    it("fails for unsigned files", function() {
       var files = signedResponse().responseBody.files;
       files = files.map(function(fileOb) {
         // This can happen for certain invalid XPIs.
@@ -366,22 +353,21 @@ describe("amoClient.Client", function() {
       var fakeRequest = sinon.spy(() => {});
       var createWriteStream = sinon.spy(() => {});
 
-      this.client.downloadSignedFiles(files, {
+      return this.client.downloadSignedFiles(files, {
         request: fakeRequest,
         createWriteStream: createWriteStream,
         stdout: {
           write: function() {},
         },
       }).then(function() {
-        done(new Error("Unexpected success"));
+        throw new Error("Unexpected success");
       }).catch(function(err) {
         expect(err.message).to.match(/no signed files were found/);
         expect(fakeRequest.called).to.be.equal(false);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("allows partially signed files", function(done) {
+    it("allows partially signed files", function() {
       var fakeResponse = {
         on: function() {
           return this;
@@ -410,7 +396,7 @@ describe("amoClient.Client", function() {
       var fakeRequest = sinon.spy(() => fakeResponse);
       var createWriteStream = sinon.spy(() => fakeFileWriter);
 
-      this.client.downloadSignedFiles(files, {
+      return this.client.downloadSignedFiles(files, {
         request: fakeRequest,
         createWriteStream: createWriteStream,
         stdout: {
@@ -423,11 +409,10 @@ describe("amoClient.Client", function() {
         expect(fakeRequest.callCount).to.be.equal(files.length - 1);
         expect(fakeRequest.firstCall.args[0].url)
           .to.be.equal(files[0].download_url);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("handles download errors", function(done) {
+    it("handles download errors", function() {
       var fakeResponse = {
         on: function(event, handler) {
           if (event === "error") {
@@ -442,18 +427,17 @@ describe("amoClient.Client", function() {
       var fakeRequest = sinon.spy(() => fakeResponse);
       var createWriteStream = sinon.spy(() => {});
 
-      this.client.downloadSignedFiles(files, {
+      return this.client.downloadSignedFiles(files, {
         request: fakeRequest,
         createWriteStream: createWriteStream,
         stdout: {
           write: function() {},
         },
       }).then(function() {
-        done(new Error("Unexpected success"));
+        throw new Error("Unexpected success");
       }).catch(function(err) {
         expect(err.message).to.include("download error");
-        done();
-      }).catch(done);
+      });
     });
   });
 
@@ -569,11 +553,11 @@ describe("amoClient.Client", function() {
       setUp.call(this);
     });
 
-    it("makes requests with an auth token", function(done) {
+    it("makes requests with an auth token", function() {
       var self = this;
       var request = {url: "/somewhere"};
 
-      this.client.get(request).then(function() {
+      return this.client.get(request).then(function() {
         var call = self.client._request.calls[0];
         var headerMatch = call.conf.headers.Authorization.match(/JWT (.*)/);
         var token = headerMatch[1];
@@ -582,8 +566,7 @@ describe("amoClient.Client", function() {
         expect(data).to.have.keys(["iss", "iat", "exp"]);
         expect(call.conf).to.be.deep.equal(
             self.client.configureRequest(request));
-        done();
-      }).catch(done);
+      });
     });
 
     it("lets you configure a request directly", function() {
@@ -622,7 +605,7 @@ describe("amoClient.Client", function() {
       expect(conf.url).to.be.equal(absUrl);
     });
 
-    it("can make any HTTP request", function(done) {
+    it("can make any HTTP request", function() {
       var self = this;
       var requests = [];
       ["get", "put", "post", "patch", "delete"].forEach(function(method) {
@@ -635,7 +618,7 @@ describe("amoClient.Client", function() {
         }));
 
       });
-      when.all(requests).then(function() { done(); }).catch(done);
+      return when.all(requests);
     });
 
     it("requires a URL", function() {
@@ -645,74 +628,67 @@ describe("amoClient.Client", function() {
       }).to.throw(Error, /URL was not specified/);
     });
 
-    it("rejects the request promise on > 200 responses", function(done) {
+    it("rejects the request promise on > 200 responses", function() {
       this.client._request = new MockRequest({httpResponse: {statusCode: 409}});
-      this.client.get({url: "/something"}).then(function() {
-        done(new Error("unexpected success"));
+      return this.client.get({url: "/something"}).then(function() {
+        throw new Error("unexpected success");
       }).catch(function(err) {
         expect(err.message).to.include("Received bad response");
-        done();
-      }).catch(done);
+      });
     });
 
-    it("rejects the request promise on < 200 responses", function(done) {
+    it("rejects the request promise on < 200 responses", function() {
       this.client._request = new MockRequest({httpResponse: {statusCode: 122}});
-      this.client.get({url: "/something"}).then(function() {
-        done(new Error("unexpected success"));
+      return this.client.get({url: "/something"}).then(function() {
+        throw new Error("unexpected success");
       }).catch(function(err) {
         expect(err.message).to.include("Received bad response");
-        done();
-      }).catch(done);
+      });
     });
 
-    it("rejects the request promise with callback error", function(done) {
+    it("rejects the request promise with callback error", function() {
       var callbackError = new Error("some error");
       this.client._request = new MockRequest({responseError: callbackError});
 
-      this.client.get({url: "/something"}).then(function() {
-        done(new Error("unexpected success"));
+      return this.client.get({url: "/something"}).then(function() {
+        throw new Error("unexpected success");
       }).catch(function(err) {
         expect(err).to.be.equal(callbackError);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("can be configured not to throw on a bad response status",
-       function(done) {
+    it("can be configured not to throw on a bad response status", function() {
       this.client._request = new MockRequest({httpResponse: {statusCode: 409}});
-      this.client.get({
+      return this.client.get({
         url: "/something",
       }, {
         throwOnBadResponse: false,
       }).then(function(result) {
         expect(result[0].statusCode).to.be.equal(409);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("resolves the request promise with the HTTP response", function(done) {
+    it("resolves the request promise with the HTTP response", function() {
       var httpResponse = {statusCode: 201};
       this.client._request = new MockRequest({httpResponse: httpResponse});
 
-      this.client.get({url: "/something"}).then(function(responseResult) {
+      return this.client.get({url: "/something"}).then((responseResult) => {
         var returnedResponse = responseResult[0];
         expect(returnedResponse).to.be.equal(httpResponse);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("resolves the request promise with the response body", function(done) {
+    it("resolves the request promise with the response body", function() {
       var responseBody = "some text response";
       this.client._request = new MockRequest({responseBody: responseBody});
 
-      this.client.get({url: "/something"}).then(function(responseResult) {
+      return this.client.get({url: "/something"}).then((responseResult) => {
         var returnedBody = responseResult[1];
         expect(returnedBody).to.be.equal(responseBody);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("resolves the request promise with a JSON object", function(done) {
+    it("resolves the request promise with a JSON object", function() {
       var data = {someKey: "some value"};
 
       this.client._request = new MockRequest({
@@ -725,14 +701,13 @@ describe("amoClient.Client", function() {
         },
       });
 
-      this.client.get({url: "/something"}).then(function(responseResult) {
+      return this.client.get({url: "/something"}).then((responseResult) => {
         var result = responseResult[1];
         expect(result).to.deep.equal(data);
-        done();
-      }).catch(done);
+      });
     });
 
-    it("ignores broken JSON responses", function(done) {
+    it("ignores broken JSON responses", function() {
       this.client._request = new MockRequest({
         responseBody: "}{",  // broken JSON
         httpResponse: {
@@ -743,11 +718,10 @@ describe("amoClient.Client", function() {
         },
       });
 
-      this.client.get({url: "/something"}).then(function(responseResult) {
+      return this.client.get({url: "/something"}).then((responseResult) => {
         var result = responseResult[1];
         expect(result).to.be.a("string");
-        done();
-      }).catch(done);
+      });
     });
   });
 });
