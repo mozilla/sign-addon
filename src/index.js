@@ -1,4 +1,3 @@
-import _ from "lodash";
 import fs from "mz/fs";
 import when from "when";
 
@@ -9,18 +8,20 @@ const AMO_API_PREFIX = "https://addons.mozilla.org/api/v3";
 
 
 export default function signAddon(options, config) {
-  config = _.assign({
+  config = {
     AMOClient: DefaultAMOClient,
-  }, config);
+    ...config,
+  };
 
-  options = _.assign({
+  options = {
     // The add-on ID as recognized by AMO. Example: my-addon@jetpack
     id: null,
     // The add-on version number for AMO.
     version: null,
     apiUrlPrefix: AMO_API_PREFIX,
     verbose: false,
-  }, options);
+    ...options,
+  };
 
   return when.promise(
     (resolve) => {
@@ -70,10 +71,11 @@ export default function signAddon(options, config) {
 
 
 export function signAddonAndExit(options, config) {
-  config = _.assign({
+  config = {
     systemProcess: process,
     throwError: false,
-  }, config);
+    ...config,
+  };
   return signAddon(options, config)
     .then(function(result) {
       logger.log(result.success ? "SUCCESS" : "FAIL");

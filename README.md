@@ -2,6 +2,8 @@
 
 Sign a Firefox add-on with Mozilla's [web service](http://addons-server.readthedocs.org/en/latest/topics/api/signing.html).
 
+[![Build Status](https://travis-ci.org/mozilla/sign-addon.svg?branch=master)](https://travis-ci.org/mozilla/sign-addon)
+
 ## Installation
 
     npm install sign-addon
