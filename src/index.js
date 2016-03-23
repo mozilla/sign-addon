@@ -86,7 +86,7 @@ export function signAddonAndExit(options, config) {
       if (config.throwError) {
         throw err;
       }
-      console.error(err.stack);
+      logger.error(err.stack);
       config.systemProcess.exit(1);
     });
 }
