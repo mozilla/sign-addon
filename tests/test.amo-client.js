@@ -12,14 +12,13 @@ describe("amoClient.Client", function() {
 
   function setUp() {
     /* jshint validthis: true */
-    var self = this;
     this.apiUrlPrefix = "http://not-a-real-amo-api.com/api/v3";
 
-    this.newClient = function(opt) {
+    this.newClient = (opt) => {
       opt = {
         apiKey: "fake-api-key",
         apiSecret: "fake-api-secret",
-        apiUrlPrefix: self.apiUrlPrefix,
+        apiUrlPrefix: this.apiUrlPrefix,
         signedStatusCheckInterval: 0,
         fs: {
           createReadStream: function() {
@@ -40,25 +39,24 @@ describe("amoClient.Client", function() {
 
     beforeEach(function() {
       setUp.call(this);
-      var self = this;
 
-      this.sign = function(conf) {
+      this.sign = (conf) => {
         conf = {
           guid: "some-guid",
           version: "some-version",
           xpiPath: "some-xpi-path",
           ...conf,
         };
-        return self.client.sign(conf);
+        return this.client.sign(conf);
       };
 
-      this.waitForSignedAddon = function(url, options) {
+      this.waitForSignedAddon = (url, options) => {
         url = url || "/some-status-url";
         options = {
           setAbortTimeout: () => {},
           ...options,
         };
-        return self.client.waitForSignedAddon(url, options);
+        return this.client.waitForSignedAddon(url, options);
       };
 
     });
@@ -82,8 +80,37 @@ describe("amoClient.Client", function() {
       };
     }
 
+    function getDownloadStubs() {
+      var fakeResponse = {
+        on: function() {
+          return this;
+        },
+        pipe: function() {
+          return this;
+        },
+      };
+
+      var fakeFileWriter = {
+        on: function(event, handler) {
+          if (event === "finish") {
+            // Simulate completion of the download immediately when the
+            // handler is registered.
+            handler();
+          }
+        },
+      };
+
+      var files = signedResponse().responseBody.files;
+      var fakeRequest = sinon.spy(() => fakeResponse);
+      var createWriteStream = sinon.spy(() => fakeFileWriter);
+      var stdout = {
+        write: function() {},
+      };
+
+      return {files, request: fakeRequest, createWriteStream, stdout};
+    }
+
     it("lets you sign an add-on", function() {
-      var self = this;
       var apiStatusUrl = "https://api/addon/version/upload/abc123";
       var conf = {
         guid: "a-guid",
@@ -101,8 +128,8 @@ describe("amoClient.Client", function() {
         },
       });
 
-      return this.sign(conf).then(function() {
-        var putCall = self.client._request.calls[0];
+      return this.sign(conf).then(() => {
+        var putCall = this.client._request.calls[0];
         expect(putCall.name).to.be.equal("put");
 
         var partialUrl = "/addons/" + conf.guid + "/versions/" + conf.version;
@@ -141,7 +168,6 @@ describe("amoClient.Client", function() {
     });
 
     it("waits for passing validation", function() {
-      var self = this;
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
 
@@ -157,10 +183,10 @@ describe("amoClient.Client", function() {
       });
 
       var statusUrl = "/addons/something/versions/1.2.3/";
-      return this.waitForSignedAddon(statusUrl).then(function() {
+      return this.waitForSignedAddon(statusUrl).then(() => {
         // Expect exactly two GETs before resolution.
-        expect(self.client._request.calls.length).to.be.equal(2);
-        expect(self.client._request.calls[0].conf.url).to.include(
+        expect(this.client._request.calls.length).to.be.equal(2);
+        expect(this.client._request.calls[0].conf.url).to.include(
           statusUrl);
         expect(downloadSignedFiles.firstCall.args[0])
           .to.be.deep.equal(files);
@@ -168,7 +194,6 @@ describe("amoClient.Client", function() {
     });
 
     it("waits for for fully reviewed files", function() {
-      var self = this;
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
 
@@ -181,15 +206,14 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      return this.waitForSignedAddon().then(function() {
+      return this.waitForSignedAddon().then(() => {
         // Expect exactly two GETs before resolution.
-        expect(self.client._request.calls.length).to.be.equal(2);
+        expect(this.client._request.calls.length).to.be.equal(2);
         expect(downloadSignedFiles.called).to.be.equal(true);
       });
     });
 
     it("waits until signed files are ready", function() {
-      var self = this;
       var downloadSignedFiles = sinon.spy(() => {});
       this.client.downloadSignedFiles = downloadSignedFiles;
       this.client._request = new MockRequest({
@@ -199,15 +223,14 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      return this.waitForSignedAddon().then(function() {
+      return this.waitForSignedAddon().then(() => {
         // Expect exactly two GETs before resolution.
-        expect(self.client._request.calls.length).to.be.equal(2);
+        expect(this.client._request.calls.length).to.be.equal(2);
         expect(downloadSignedFiles.called).to.be.equal(true);
       });
     });
 
     it("waits for failing validation", function() {
-      var self = this;
       this.client._request = new MockRequest({
         responseQueue: [
           signedResponse({valid: false, processed: false}),
@@ -215,9 +238,9 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      return this.waitForSignedAddon().then(function(result) {
+      return this.waitForSignedAddon().then((result) => {
         // Expect exactly two GETs before resolution.
-        expect(self.client._request.calls.length).to.be.equal(2);
+        expect(this.client._request.calls.length).to.be.equal(2);
         expect(result.success).to.be.equal(false);
       });
     });
@@ -342,6 +365,18 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("configures a download destination in the contructor", function() {
+      let downloadDir = "/some/fake/destination-dir/";
+      let client = this.newClient({downloadDir});
+      let stubs = getDownloadStubs();
+
+      return client.downloadSignedFiles(stubs.files, stubs).then(() => {
+        var filePath = path.join(downloadDir, "some-signed-file-1.2.3.xpi");
+        expect(stubs.createWriteStream.firstCall.args[0])
+          .to.be.equal(filePath);
+      });
+    });
+
     it("fails for unsigned files", function() {
       var files = signedResponse().responseBody.files;
       files = files.map(function(fileOb) {
@@ -349,71 +384,38 @@ describe("amoClient.Client", function() {
         fileOb.signed = false;
         return fileOb;
       });
+      let stubs = getDownloadStubs();
 
-      var fakeRequest = sinon.spy(() => {});
-      var createWriteStream = sinon.spy(() => {});
-
-      return this.client.downloadSignedFiles(files, {
-        request: fakeRequest,
-        createWriteStream: createWriteStream,
-        stdout: {
-          write: function() {},
-        },
-      }).then(function() {
+      return this.client.downloadSignedFiles(files, stubs).then(function() {
         throw new Error("Unexpected success");
       }).catch(function(err) {
         expect(err.message).to.match(/no signed files were found/);
-        expect(fakeRequest.called).to.be.equal(false);
+        expect(stubs.request.called).to.be.equal(false);
       });
     });
 
     it("allows partially signed files", function() {
-      var fakeResponse = {
-        on: function() {
-          return this;
-        },
-        pipe: function() {
-          return this;
-        },
-      };
-
-      var fakeFileWriter = {
-        on: function(event, handler) {
-          if (event === "finish") {
-            // Simulate completion of the download immediately when the
-            // handler is registered.
-            handler();
-          }
-        },
-      };
-
-      var files = signedResponse().responseBody.files;
-      files.push({
+      let stubs = getDownloadStubs();
+      stubs.files.push({
         signed: false,
         download_url: "http://nope.org/should-not-be-downloaded.xpi",
       });
 
-      var fakeRequest = sinon.spy(() => fakeResponse);
-      var createWriteStream = sinon.spy(() => fakeFileWriter);
-
-      return this.client.downloadSignedFiles(files, {
-        request: fakeRequest,
-        createWriteStream: createWriteStream,
-        stdout: {
-          write: function() {},
-        },
-      }).then(function(result) {
-        var filePath = path.join(process.cwd(), "some-signed-file-1.2.3.xpi");
-        expect(result.success).to.be.equal(true);
-        expect(result.downloadedFiles).to.be.deep.equal([filePath]);
-        expect(fakeRequest.callCount).to.be.equal(files.length - 1);
-        expect(fakeRequest.firstCall.args[0].url)
-          .to.be.equal(files[0].download_url);
-      });
+      return this.client.downloadSignedFiles(stubs.files, stubs)
+        .then((result) => {
+          var filePath = path.join(process.cwd(), "some-signed-file-1.2.3.xpi");
+          expect(result.success).to.be.equal(true);
+          expect(result.downloadedFiles).to.be.deep.equal([filePath]);
+          expect(stubs.request.callCount).to.be.equal(stubs.files.length - 1);
+          expect(stubs.request.firstCall.args[0].url)
+            .to.be.equal(stubs.files[0].download_url);
+        });
     });
 
     it("handles download errors", function() {
-      var fakeResponse = {
+      let stubs = getDownloadStubs();
+
+      var errorResponse = {
         on: function(event, handler) {
           if (event === "error") {
             // Immediately trigger a download error.
@@ -423,19 +425,12 @@ describe("amoClient.Client", function() {
         pipe: function() {},
       };
 
-      var files = signedResponse().responseBody.files;
-      var fakeRequest = sinon.spy(() => fakeResponse);
-      var createWriteStream = sinon.spy(() => {});
-
-      return this.client.downloadSignedFiles(files, {
-        request: fakeRequest,
-        createWriteStream: createWriteStream,
-        stdout: {
-          write: function() {},
-        },
-      }).then(function() {
+      return this.client.downloadSignedFiles(stubs.files, {
+        ...stubs,
+        request: () => errorResponse,
+      }).then(() => {
         throw new Error("Unexpected success");
-      }).catch(function(err) {
+      }).catch((err) => {
         expect(err.message).to.include("download error");
       });
     });
@@ -443,13 +438,11 @@ describe("amoClient.Client", function() {
 
 
   describe("debugging", function() {
-    var fakeDebug;
     var fakeLog;
 
     beforeEach(function() {
-      fakeDebug = sinon.spy(() => {});
       fakeLog = {
-        debug: fakeDebug,
+        log: sinon.spy(() => {}),
       };
     });
 
@@ -459,8 +452,8 @@ describe("amoClient.Client", function() {
         logger: fakeLog,
       });
       cli.debug("first", "second");
-      expect(fakeDebug.firstCall.args[0]).to.be.equal("first");
-      expect(fakeDebug.firstCall.args[1]).to.be.equal("second");
+      expect(fakeLog.log.firstCall.args[0]).to.be.equal("first");
+      expect(fakeLog.log.firstCall.args[1]).to.be.equal("second");
     });
 
     it("hides debug output by default", function() {
@@ -468,7 +461,7 @@ describe("amoClient.Client", function() {
         logger: fakeLog,
       });
       cli.debug("first", "second");
-      expect(fakeDebug.called).to.be.equal(false);
+      expect(fakeLog.log.called).to.be.equal(false);
     });
 
     it("redacts authorization headers", function() {
@@ -483,7 +476,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeDebug.firstCall.args[1].request.headers.Authorization)
+      expect(fakeLog.log.firstCall.args[1].request.headers.Authorization)
         .to.be.equal("<REDACTED>");
     });
 
@@ -499,7 +492,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeDebug.firstCall.args[1].response.headers["set-cookie"])
+      expect(fakeLog.log.firstCall.args[1].response.headers["set-cookie"])
         .to.be.equal("<REDACTED>");
     });
 
@@ -515,7 +508,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeDebug.firstCall.args[1].request.headers.cookie)
+      expect(fakeLog.log.firstCall.args[1].request.headers.cookie)
         .to.be.equal("<REDACTED>");
     });
 
@@ -554,18 +547,17 @@ describe("amoClient.Client", function() {
     });
 
     it("makes requests with an auth token", function() {
-      var self = this;
       var request = {url: "/somewhere"};
 
-      return this.client.get(request).then(function() {
-        var call = self.client._request.calls[0];
+      return this.client.get(request).then(() => {
+        var call = this.client._request.calls[0];
         var headerMatch = call.conf.headers.Authorization.match(/JWT (.*)/);
         var token = headerMatch[1];
-        var data = jwt.verify(token, self.client.apiSecret);
-        expect(data.iss).to.be.equal(self.client.apiKey);
+        var data = jwt.verify(token, this.client.apiSecret);
+        expect(data.iss).to.be.equal(this.client.apiKey);
         expect(data).to.have.keys(["iss", "iat", "exp"]);
         expect(call.conf).to.be.deep.equal(
-            self.client.configureRequest(request));
+            this.client.configureRequest(request));
       });
     });
 
@@ -606,14 +598,13 @@ describe("amoClient.Client", function() {
     });
 
     it("can make any HTTP request", function() {
-      var self = this;
       var requests = [];
-      ["get", "put", "post", "patch", "delete"].forEach(function(method) {
+      ["get", "put", "post", "patch", "delete"].forEach((method) => {
         var urlPath = "/some/path";
 
-        requests.push(self.client[method]({url: urlPath}).then(function() {
-          var call = self.client._request.callMap[method];
-          expect(call.conf.url).to.be.equal(self.apiUrlPrefix + urlPath);
+        requests.push(this.client[method]({url: urlPath}).then(() => {
+          var call = this.client._request.callMap[method];
+          expect(call.conf.url).to.be.equal(this.apiUrlPrefix + urlPath);
           expect(call.conf.headers).to.have.keys(["Accept", "Authorization"]);
         }));
 
@@ -622,9 +613,8 @@ describe("amoClient.Client", function() {
     });
 
     it("requires a URL", function() {
-      var self = this;
-      expect(function() {
-        self.client.configureRequest({});
+      expect(() => {
+        this.client.configureRequest({});
       }).to.throw(Error, /URL was not specified/);
     });
 
@@ -818,7 +808,6 @@ class MockProgress {
 class MockRequest {
 
   constructor(conf) {
-    var self = this;
     var defaultResponse = {
       httpResponse: {statusCode: 200},
       responseBody: "",
@@ -842,7 +831,7 @@ class MockRequest {
 
     // Make sure each queued response has the default values.
     this.responseQueue.forEach((response, i) => {
-      self.responseQueue[i] = {...defaultResponse, ...response};
+      this.responseQueue[i] = {...defaultResponse, ...response};
     });
 
     this.calls = [];

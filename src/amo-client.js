@@ -22,6 +22,8 @@ const defaultClearInterval = clearInterval;
  *   - `signedStatusCheckTimeout`: A length in millesconds to give up
  *      if the add-on hasn't been signed.
  *   - `debugLogging`: When true, log more information
+ *   - `downloadDir`: Absolute path to save downloaded files to.
+ *     The working directory will be used by default.
  */
 export class Client {
   constructor({apiKey,
@@ -31,6 +33,7 @@ export class Client {
                signedStatusCheckInterval=1000,
                signedStatusCheckTimeout=120000,  // 2 minutes.
                logger=console,
+               downloadDir=process.cwd(),
                fs=defaultFs,
                request=defaultRequest,
                validateProgress}) {
@@ -41,6 +44,7 @@ export class Client {
     this.signedStatusCheckTimeout = signedStatusCheckTimeout;
     this.debugLogging = debugLogging;
     this.logger = logger;
+    this.downloadDir = downloadDir;
 
     // Set up external dependencies, allowing for overrides.
     this._validateProgress = validateProgress || new PseudoProgress({
@@ -60,7 +64,6 @@ export class Client {
    * @return {Promise}
    */
   sign({guid, version, xpiPath}) {
-    var self = this;
 
     var addonUrl = "/addons/" + encodeURIComponent(guid);
     addonUrl += "/versions/" + encodeURIComponent(version) + "/";
@@ -72,27 +75,27 @@ export class Client {
       },
     }, {
       throwOnBadResponse: false,
-    }).then(function(responseResult) {
+    }).then((responseResult) => {
       var httpResponse = responseResult[0] || {};
       var response = responseResult[1];
 
       var acceptableStatuses = [200, 201, 202];
       if (acceptableStatuses.indexOf(httpResponse.statusCode) === -1) {
         if (typeof response === "object" && response.error) {
-          self.logger.error("Server response:", response.error,
+          this.logger.error("Server response:", response.error,
                             "( status:", httpResponse.statusCode, ")");
           return {success: false};
         }
 
         throw new Error(
           "Received bad response from the server while requesting " +
-          self.absoluteURL(addonUrl) +
+          this.absoluteURL(addonUrl) +
           "\n\n" + "status: " + httpResponse.statusCode + "\n" +
           "response: " + formatResponse(response) + "\n" + "headers: " +
           JSON.stringify(httpResponse.headers || {}) + "\n");
       }
 
-      return self.waitForSignedAddon(response.url);
+      return this.waitForSignedAddon(response.url);
     });
   }
 
@@ -103,24 +106,23 @@ export class Client {
    * @return {Promise}
    */
   waitForSignedAddon(statusUrl, opt) {
-    var self = this;
     var lastStatusResponse;
 
     opt = {
       clearTimeout: clearTimeout,
       setAbortTimeout: setTimeout,
       setStatusCheckTimeout: setTimeout,
-      abortAfter: self.signedStatusCheckTimeout,
+      abortAfter: this.signedStatusCheckTimeout,
       ...opt,
     };
 
-    return when.promise(function(resolve, reject) {
-      self._validateProgress.animate();
+    return when.promise((resolve, reject) => {
+      this._validateProgress.animate();
       var statusCheckTimeout;
       var nextStatusCheck;
 
-      function checkSignedStatus() {
-        self.get({url: statusUrl}).then(function(result) {
+      const checkSignedStatus = () => {
+        this.get({url: statusUrl}).then((result) => {
           var data = result[1];
           lastStatusResponse = data;
 
@@ -144,12 +146,12 @@ export class Client {
           if (data.processed &&
                 (failedValidation || signedAndReady || requiresManualReview)) {
 
-            self._validateProgress.finish();
+            this._validateProgress.finish();
             opt.clearTimeout(statusCheckTimeout);
-            self.logger.log("Validation results:", data.validation_url);
+            this.logger.log("Validation results:", data.validation_url);
 
             if (requiresManualReview) {
-              self.logger.log(
+              this.logger.log(
                 "Your add-on has been submitted for review. It passed " +
                 "validation but could not be automatically signed " +
                 "because this is a listed add-on.");
@@ -157,9 +159,9 @@ export class Client {
             } else if (signedAndReady) {
               // TODO: show some validation warnings if there are any.
               // We should show things like "missing update URL in install.rdf"
-              return resolve(self.downloadSignedFiles(data.files));
+              return resolve(this.downloadSignedFiles(data.files));
             } else {
-              self.logger.log(
+              this.logger.log(
                 "Your add-on failed validation and could not be signed");
               return resolve({success: false});
             }
@@ -167,15 +169,15 @@ export class Client {
           } else {
             // The add-on has not been fully processed yet.
             nextStatusCheck = opt.setStatusCheckTimeout(
-                checkSignedStatus, self.signedStatusCheckInterval);
+                checkSignedStatus, this.signedStatusCheckInterval);
           }
         });
-      }
+      };
 
       checkSignedStatus();
 
-      statusCheckTimeout = opt.setAbortTimeout(function() {
-        self._validateProgress.finish();
+      statusCheckTimeout = opt.setAbortTimeout(() => {
+        this._validateProgress.finish();
         opt.clearTimeout(nextStatusCheck);
         reject(new Error(
             "Validation took too long to complete; last status: " +
@@ -197,11 +199,10 @@ export class Client {
   downloadSignedFiles(signedFiles,
                       {createWriteStream=defaultFs.createWriteStream,
                        request,
-                       stdout=process.stdout}) {
+                       stdout=process.stdout} = {}) {
     if (!request) {
       request = this._request;
     }
-    var self = this;
     var allDownloads = [];
     var dataExpected = null;
     var dataReceived = 0;
@@ -224,13 +225,13 @@ export class Client {
           "Downloading signed files: " + progress);
     }
 
-    function download(fileUrl) {
-      return when.promise(function(resolve, reject) {
+    const download = (fileUrl) => {
+      return when.promise((resolve, reject) => {
         // The API will give us a signed file named in a sane way.
-        var fileName = path.join(process.cwd(), getUrlBasename(fileUrl));
+        var fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
         var out = createWriteStream(fileName);
 
-        request(self.configureRequest({
+        request(this.configureRequest({
             method: "GET",
             url: fileUrl,
             followRedirect: true,
@@ -254,24 +255,24 @@ export class Client {
           resolve(fileName);
         });
       });
-    }
+    };
 
     // TODO: handle 404 downloads
 
-    return when.promise(function(resolve, reject) {
+    return when.promise((resolve, reject) => {
       var foundUnsignedFiles = false;
-      signedFiles.forEach(function(file) {
+      signedFiles.forEach((file) => {
         if (file.signed) {
           allDownloads.push(download(file.download_url));
         } else {
-          self.debug("This file was not signed:", file);
+          this.debug("This file was not signed:", file);
           foundUnsignedFiles = true;
         }
       });
 
       if (allDownloads.length) {
         if (foundUnsignedFiles) {
-          self.logger.log(
+          this.logger.log(
             "Some files were not signed. Re-run with --verbose for details.");
         }
         showProgress();
@@ -282,10 +283,10 @@ export class Client {
           "manifest and make sure it targets Firefox as an application."));
       }
 
-    }).then(function(downloadedFiles) {
-      self.logger.log("Downloaded:");
-      downloadedFiles.forEach(function(fileName) {
-        self.logger.log("    " + fileName.replace(process.cwd(), "."));
+    }).then((downloadedFiles) => {
+      this.logger.log("Downloaded:");
+      downloadedFiles.forEach((fileName) => {
+        this.logger.log("    " + fileName.replace(process.cwd(), "."));
       });
       return {
         success: true,
@@ -409,13 +410,12 @@ export class Client {
    */
   request(method, requestConf, {throwOnBadResponse=true} = {}) {
     method = method.toLowerCase();
-    var self = this;
-    return when.promise(function(resolve) {
-      requestConf = self.configureRequest(requestConf);
-      self.debug("[API] ->", requestConf);
+    return when.promise((resolve) => {
+      requestConf = this.configureRequest(requestConf);
+      this.debug("[API] ->", requestConf);
 
       // Get the caller, like request.get(), request.put() ...
-      var requestMethod = self._request[method].bind(self._request);
+      var requestMethod = this._request[method].bind(this._request);
       // Wrap the request callback in a promise. Here is an example without
       // promises:
       //
@@ -425,7 +425,7 @@ export class Client {
       //
       resolve(nodefn.call(requestMethod, requestConf));
 
-    }).then(function(responseResult) {
+    }).then((responseResult) => {
       var httpResponse = responseResult[0];
       var body = responseResult[1];
 
@@ -433,7 +433,7 @@ export class Client {
         if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
           throw new Error(
             "Received bad response from " +
-            self.absoluteURL(requestConf.url) + "; " +
+            this.absoluteURL(requestConf.url) + "; " +
             "status: " + httpResponse.statusCode + "; " +
             "response: " + formatResponse(body));
         }
@@ -447,10 +447,10 @@ export class Client {
         try {
           body = JSON.parse(body);
         } catch (e) {
-          self.logger.log("Failed to parse JSON response from server:", e);
+          this.logger.log("Failed to parse JSON response from server:", e);
         }
       }
-      self.debug("[API] <-",
+      this.debug("[API] <-",
                  {headers: httpResponse.headers, response: body});
 
       return [httpResponse, body];
@@ -489,7 +489,7 @@ export class Client {
       }
       return val;
     });
-    this.logger.debug(...args);
+    this.logger.log(...args);
   }
 }
 
@@ -505,7 +505,7 @@ export class PseudoProgress {
   constructor({preamble="",
                setInterval=defaultSetInterval,
                clearInterval=defaultClearInterval,
-               stdout=process.stdout}) {
+               stdout=process.stdout} = {}) {
 
     this.bucket = [];
     this.interval = null;
@@ -536,13 +536,12 @@ export class PseudoProgress {
       speed: 100,
       ...conf,
     };
-    var self = this;
     var bucketIsFull = false;
-    this.interval = this.setInterval(function() {
+    this.interval = this.setInterval(() => {
       if (bucketIsFull) {
-        self.moveBucket();
+        this.moveBucket();
       } else {
-        bucketIsFull = self.randomlyFillBucket();
+        bucketIsFull = this.randomlyFillBucket();
       }
     }, conf.speed);
   }
@@ -554,7 +553,6 @@ export class PseudoProgress {
 
   randomlyFillBucket() {
     // randomly fill a bucket (the width of the shell) with dots.
-    var self = this;
     var randomIndex = Math.floor(Math.random() *
                                  this.emptyBucketPointers.length);
     var pointer = this.emptyBucketPointers[randomIndex];
@@ -564,8 +562,8 @@ export class PseudoProgress {
 
     var isFull = true;
     var newPointers = [];
-    this.emptyBucketPointers.forEach(function(pointer) {
-      if (self.bucket[pointer] === " ") {
+    this.emptyBucketPointers.forEach((pointer) => {
+      if (this.bucket[pointer] === " ") {
         isFull = false;
         newPointers.push(pointer);
       }

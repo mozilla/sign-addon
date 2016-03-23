@@ -33,12 +33,20 @@ import signAddon from 'sign-addon';
 
 signAddon(
   {
+    // Required arguments:
+
     xpiPath: '/path/to/your/addon.xpi',
     id: 'your-addon-id@somewhere',
     version: '0.0.1',
     apiKey: 'Your JWT issuer',
     apiSecret: 'Your JWT secret',
-    // Optional: number of milleseconds to wait before aborting the request.
+
+    // Optional arguments:
+
+    // Save downloaded files to this directory.
+    // Default: current working directory.
+    downloadDir: undefined,
+    // Number of milleseconds to wait before aborting the request.
     // Default: 2 minutes.
     timeout: undefined,
   })
