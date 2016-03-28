@@ -72,3 +72,11 @@ Install all requirements and run tests from the source:
 
     npm install
     npm start
+
+To create a new release, do the following:
+
+* Pull from master to make sure you're up to date.
+* Bump the version in `package.json`.
+* Commit and push the version change.
+* Tag master (example: `git tag 0.0.1`) and run `git push --tags upstream`.
+* Run `npm publish`.
