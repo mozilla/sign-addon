@@ -64,13 +64,13 @@ describe("sign", function() {
       xpiPath: path.join(fixturePath, "simple-addon.xpi"),
       version: "0.0.1",
       verbose: false,
+      AMOClient: options.StubAMOClient,
       ...options.cmdOptions,
     };
 
     var cmdConfig = {
       systemProcess: mockProcess,
       throwError: options.throwError,
-      AMOClient: options.StubAMOClient,
     };
 
     return signAddonAndExit(cmdOptions, cmdConfig);
@@ -128,6 +128,18 @@ describe("sign", function() {
       expect(fakeClientContructor.called).to.be.equal(true);
       expect(fakeClientContructor.firstCall.args[0].signedStatusCheckTimeout)
         .to.be.equal(5000);
+    });
+  });
+
+  it("can configure a download destination", () => {
+    return runSignCmd({
+      cmdOptions: {
+        downloadDir: "/some/fake/download-destination",
+      },
+    }).then(function() {
+      expect(fakeClientContructor.called).to.be.equal(true);
+      expect(fakeClientContructor.firstCall.args[0].downloadDir)
+        .to.be.equal("/some/fake/download-destination");
     });
   });
 

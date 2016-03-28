@@ -2,7 +2,7 @@
   "name": "sign-addon",
   "version": "0.0.1",
   "description": "Signs a Firefox add-on using Mozilla's web service",
-  "main": "main/sign-addon.js",
+  "main": "dist/sign-addon.js",
   "scripts": {
     "build": "node -e \"require('grunt').cli()\" null build",
     "start": "node -e \"require('grunt').cli()\" null develop",

@@ -3,8 +3,6 @@ import when from "when";
 
 import {Client as DefaultAMOClient} from "./amo-client";
 
-const logger = console;
-
 
 export default function signAddon(
   {
@@ -24,8 +22,8 @@ export default function signAddon(
     // Number of milleseconds to wait before giving up on a
     // response from Mozilla's web service.
     timeout=undefined,
-  },
-  {
+    // Absolute directory to save downloaded files in.
+    downloadDir=undefined,
     AMOClient=DefaultAMOClient,
   }) {
 
@@ -66,9 +64,10 @@ export default function signAddon(
     .then(() => {
 
       let client = new AMOClient({
-        apiKey: apiKey,
-        apiSecret: apiSecret,
-        apiUrlPrefix: apiUrlPrefix,
+        apiKey,
+        apiSecret,
+        apiUrlPrefix,
+        downloadDir,
         debugLogging: verbose,
         signedStatusCheckTimeout: timeout,
       });
@@ -83,23 +82,19 @@ export default function signAddon(
 }
 
 
-export function signAddonAndExit(options, config) {
-  config = {
-    systemProcess: process,
-    throwError: false,
-    ...config,
-  };
-  return signAddon(options, config)
-    .then(function(result) {
+export function signAddonAndExit(
+    options, {systemProcess=process, throwError=false, logger=console}) {
+  return signAddon(options)
+    .then((result) => {
       logger.log(result.success ? "SUCCESS" : "FAIL");
-      config.systemProcess.exit(result.success ? 0 : 1);
+      systemProcess.exit(result.success ? 0 : 1);
     })
-    .catch(function(err) {
+    .catch((err) => {
       logger.error("FAIL");
-      if (config.throwError) {
+      if (throwError) {
         throw err;
       }
       logger.error(err.stack);
-      config.systemProcess.exit(1);
+      systemProcess.exit(1);
     });
 }
