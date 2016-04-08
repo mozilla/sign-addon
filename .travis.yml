@@ -12,3 +12,11 @@ notifications:
     - irc.mozilla.org#amo-bots
     on_success: change
     on_failure: always
+deploy:
+  provider: npm
+  email: addons-dev-automation+npm@mozilla.com
+  # This is the API key for npm user 'addons-robot'
+  api_key:
+    secure: Gp2YvKQc7dAExVuWQ7pYkClaW/SrGsCuCJnR4PQvHg2Mmzs3zC18KNctKxMFw0Ph3G8JujOdoG1f+16BZQRuTxaeZpE4kiAOpC3uLpcqfnrQnU13R2h/6I+qz7ujy7PZ6RmrPjwcHMt89nxD1SOeuVFsaRRRLZk6za7GFbfoqUZgXFF+5ZlUILm54IMshjs1l67TINvUYYBY1HHBeUH30l0EKpjiqtFQZvAbPO9r4mbb9VCjQcVb2WJjgXMA/Nbjm3BzUq3+ds5d6g5gQYIDhmg+/u3CgxCF7c5kErNunaF8XR2Qewg2JtZiuVj09l5c/YqY3gdRx6O9GchCZmD7uYZTlU8L1j6TibDuRWRLzqrSAHPXw+eW/zDuWGYrwpIovy1exYx79UHcOpMRNG3nLiZXPESvpEGd1Cc3ZriVidcgj7o/xzIjlvex9hXalnd8PGgyLHcM4yidnQ4mmx4Rb75EDUQzZPpXltATD0X5bhi970D8wijU7KirJSoobW9UW4A7Eey7BVawpA6HO7GwSQyDRAm0brYN6PBmAasa6Mgjek4unLqziYNYSSKpzhyNnL5Gq/i5d+TkNuz+6DeIywf3GVS6Qu1j8N5Pmm6umJsrajc4sxBlsaZFzNxq4dMSd78mHsaI1E1YFTWuTnFklOYamh0LIe4N4OjLO0Egc0w=
+  on:
+    tags: true
