@@ -85,4 +85,6 @@ To create a new release, do the following:
 * Bump the version in `package.json`.
 * Commit and push the version change.
 * Tag master (example: `git tag 0.0.1`) and run `git push --tags upstream`.
-* Run `npm publish`.
+* When TravisCI builds the tag,
+  it will automatically publish the package to
+  [npm](https://www.npmjs.com/package/sign-addon):
