@@ -50,7 +50,7 @@ signAddon(
     // Default: 2 minutes.
     timeout: undefined,
   })
-  .then((result) => {
+  .then(function(result) {
     if (result.success) {
       console.log("The following signed files were downloaded:");
       console.log(result.downloadedFiles);
@@ -60,9 +60,15 @@ signAddon(
     }
     console.log(result.success ? "SUCCESS" : "FAIL");
   })
-  .catch((error) => {
+  .catch(function(error) {
     console.error("Signing error:", error);
   });
+````
+
+In ES6 code, you can import it more concisely:
+
+````javascript
+import signAddon from 'sign-addon';
 ````
 
 ## Development
