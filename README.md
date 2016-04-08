@@ -29,7 +29,7 @@ Here is how to retrieve a signed version of an
 [XPI file](https://developer.mozilla.org/en-US/docs/Mozilla/XPI):
 
 ````javascript
-import signAddon from 'sign-addon';
+var signAddon = require('sign-addon').default;
 
 signAddon(
   {
