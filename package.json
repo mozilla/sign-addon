@@ -14,7 +14,7 @@
     "deepcopy": "0.6.1",
     "es6-error": "2.1.0",
     "es6-promisify": "4.0.0",
-    "jsonwebtoken": "5.7.0",
+    "jsonwebtoken": "6.1.1",
     "mz": "2.4.0",
     "request": "2.72.0",
     "source-map-support": "0.4.0",
