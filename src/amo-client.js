@@ -59,20 +59,35 @@ export class Client {
    *
    * @param {Object} conf
    *   - `xpiPath` Path to xpi file.
-   *   - `guid` add-on GUID, aka the ID in install.rdf.
+   *   - `guid` Optional add-on GUID, aka the ID in install.rdf.
    *   - `version` add-on version string.
-   * @return {Promise}
+   * @return {Promise} signingResult with keys:
+   *   - success: boolean
+   *   - downloadedFiles: Array of file objects
+   *   - id: string identifier for the signed add-on
    */
   sign({guid, version, xpiPath}) {
 
-    var addonUrl = "/addons/" + encodeURIComponent(guid);
-    addonUrl += "/versions/" + encodeURIComponent(version) + "/";
+    const formData = {
+      upload: this._fs.createReadStream(xpiPath),
+    };
+    let addonUrl = "/addons/";
+    let method = "put";
+    if (guid) {
+      // PUT to a specific URL for this add-on + version.
+      addonUrl += encodeURIComponent(guid) +
+        "/versions/" + encodeURIComponent(version) + "/";
+    } else {
+      // POST to a generic URL to create a new add-on.
+      this.debug("Signing add-on without an ID");
+      method = "post";
+      formData.version = version;
+    }
 
-    return this.put({
-      url: addonUrl,
-      formData: {
-        upload: this._fs.createReadStream(xpiPath),
-      },
+    const doRequest = this[method].bind(this);
+
+    return doRequest({
+      url: addonUrl, formData,
     }, {
       throwOnBadResponse: false,
     }).then((responseResult) => {
@@ -159,7 +174,14 @@ export class Client {
             } else if (signedAndReady) {
               // TODO: show some validation warnings if there are any.
               // We should show things like "missing update URL in install.rdf"
-              return resolve(this.downloadSignedFiles(data.files));
+              return resolve(
+                this.downloadSignedFiles(data.files)
+                .then((result) => {
+                  return {
+                    id: data.guid,
+                    ...result,
+                  };
+                }));
             } else {
               this.logger.log(
                 "Your add-on failed validation and could not be signed");

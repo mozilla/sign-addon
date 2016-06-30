@@ -179,16 +179,15 @@ describe("sign", function() {
     });
   });
 
-  it("should throw error when id is empty", () => {
+  it("should allow an empty id", () => {
     return runSignCmd({
       cmdOptions: {
         id: null,
         version: "0.0.1",
       },
     }).then(() => {
-      throw new Error("unexpected success");
-    }).catch((error) => {
-      expect(error.message).to.match(/argument was empty: id/);
+      expect(signingCall.called).to.be.equal(true);
+      expect(signingCall.firstCall.args[0].guid).to.be.null;
     });
   });
 

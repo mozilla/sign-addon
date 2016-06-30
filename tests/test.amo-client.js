@@ -63,6 +63,7 @@ describe("amoClient.Client", function() {
 
     function signedResponse(overrides) {
       var res = {
+        guid: "an-addon-guid",
         active: true,
         processed: true,
         valid: true,
@@ -135,6 +136,41 @@ describe("amoClient.Client", function() {
         var partialUrl = "/addons/" + conf.guid + "/versions/" + conf.version;
         expect(putCall.conf.url).to.include(partialUrl);
         expect(putCall.conf.formData.upload).to.be.equal("fake-read-stream");
+        // When doing a PUT, the version is in the URL not the form data.
+        expect(putCall.conf.formData.version).to.be.undefined;
+
+        expect(waitForSignedAddon.called).to.be.equal(true);
+        expect(waitForSignedAddon.firstCall.args[0])
+          .to.be.equal(apiStatusUrl);
+      });
+    });
+
+    it("lets you sign an add-on without an ID", function() {
+      const apiStatusUrl = "https://api/addon/version/upload/abc123";
+      const conf = {
+        guid: null,
+        version: "a-version",
+      };
+      const waitForSignedAddon = sinon.spy(() => {});
+      this.client.waitForSignedAddon = waitForSignedAddon;
+
+      this.client._request = new MockRequest({
+        httpResponse: {statusCode: 202},
+        // Partial response like:
+        // http://olympia.readthedocs.org/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
+        responseBody: {
+          url: apiStatusUrl,
+        },
+      });
+
+      return this.sign(conf).then(() => {
+        var call = this.client._request.calls[0];
+        expect(call.name).to.be.equal("post");
+
+        // Make sure the endpoint ends with /addons/
+        expect(call.conf.url).to.match(/\/addons\/$/);
+        expect(call.conf.formData.upload).to.be.equal("fake-read-stream");
+        expect(call.conf.formData.version).to.be.equal(conf.version);
 
         expect(waitForSignedAddon.called).to.be.equal(true);
         expect(waitForSignedAddon.firstCall.args[0])
@@ -168,7 +204,7 @@ describe("amoClient.Client", function() {
     });
 
     it("waits for passing validation", function() {
-      var downloadSignedFiles = sinon.spy(() => {});
+      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
 
       var files = [{
@@ -193,8 +229,29 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("resolves with the extension ID in the result", function() {
+      const files = [{
+        signed: true,
+        download_url: "http://amo/the-signed-file-1.2.3.xpi",
+      }];
+      const downloadSignedFiles = sinon.spy(() => Promise.resolve({files}));
+      this.client.downloadSignedFiles = downloadSignedFiles;
+
+      const guid = "some-addon-guid";
+      this.client._request = new MockRequest({
+        responseQueue: [
+          signedResponse({valid: true, processed: true, files, guid}),
+        ],
+      });
+
+      return this.waitForSignedAddon("/status-url").then((result) => {
+        expect(result.files).to.be.deep.equal(files);
+        expect(result.id).to.be.deep.equal(guid);
+      });
+    });
+
     it("waits for for fully reviewed files", function() {
-      var downloadSignedFiles = sinon.spy(() => {});
+      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
 
       this.client._request = new MockRequest({
@@ -214,7 +271,7 @@ describe("amoClient.Client", function() {
     });
 
     it("waits until signed files are ready", function() {
-      var downloadSignedFiles = sinon.spy(() => {});
+      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
       this.client._request = new MockRequest({
         responseQueue: [
@@ -305,7 +362,7 @@ describe("amoClient.Client", function() {
         ],
       });
 
-      var downloadSignedFiles = sinon.spy(() => {});
+      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
 
       return this.waitForSignedAddon("/status-url/", {
