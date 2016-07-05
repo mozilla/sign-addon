@@ -571,6 +571,9 @@ export class PseudoProgress {
   finish() {
     this.clearInterval(this.interval);
     this.fillBucket();
+    // The bucket has already filled to the terminal width at this point
+    // but for copy/paste purposes, add a new line:
+    this.stdout.write("\n");
   }
 
   randomlyFillBucket() {
