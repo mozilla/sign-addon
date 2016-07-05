@@ -354,6 +354,26 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("can use a request proxy", function() {
+      const proxyServer = "http://yourproxy:6000";
+      const client = this.newClient({proxyServer});
+      const conf = client.configureRequest({url: "http://site"});
+      expect(conf.proxy).to.be.equal(proxyServer);
+    });
+
+    it("can arbitrarily configure the request", function() {
+      const requestConfig = {
+        url: "http://this-is-ignored",
+        tunnel: true,
+        strictSSL: true,
+      };
+      const client = this.newClient({requestConfig});
+      const conf = client.configureRequest({url: "http://site"});
+      expect(conf.url).to.be.equal("http://site");
+      expect(conf.tunnel).to.be.equal(requestConfig.tunnel);
+      expect(conf.strictSSL).to.be.equal(requestConfig.strictSSL);
+    });
+
     it("clears abort timeout after resolution", function() {
       var clearTimeout = sinon.spy(() => {});
       this.client._request = new MockRequest({
@@ -509,8 +529,9 @@ describe("amoClient.Client", function() {
         logger: fakeLog,
       });
       cli.debug("first", "second");
-      expect(fakeLog.log.firstCall.args[0]).to.be.equal("first");
-      expect(fakeLog.log.firstCall.args[1]).to.be.equal("second");
+      expect(fakeLog.log.firstCall.args[0]).to.be.equal("[sign-addon]");
+      expect(fakeLog.log.firstCall.args[1]).to.be.equal("first");
+      expect(fakeLog.log.firstCall.args[2]).to.be.equal("second");
     });
 
     it("hides debug output by default", function() {
@@ -533,7 +554,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeLog.log.firstCall.args[1].request.headers.Authorization)
+      expect(fakeLog.log.firstCall.args[2].request.headers.Authorization)
         .to.be.equal("<REDACTED>");
     });
 
@@ -549,7 +570,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeLog.log.firstCall.args[1].response.headers["set-cookie"])
+      expect(fakeLog.log.firstCall.args[2].response.headers["set-cookie"])
         .to.be.equal("<REDACTED>");
     });
 
@@ -565,7 +586,7 @@ describe("amoClient.Client", function() {
           },
         },
       });
-      expect(fakeLog.log.firstCall.args[1].request.headers.cookie)
+      expect(fakeLog.log.firstCall.args[2].request.headers.cookie)
         .to.be.equal("<REDACTED>");
     });
 

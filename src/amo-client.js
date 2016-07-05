@@ -24,6 +24,10 @@ const defaultClearInterval = clearInterval;
  *   - `debugLogging`: When true, log more information
  *   - `downloadDir`: Absolute path to save downloaded files to.
  *     The working directory will be used by default.
+ *   - `proxyServer`: Optional proxy server to use for all requests,
+ *     such as "http://yourproxy:6000"
+ *   - `requestConfig`: Optional configuration object to pass to
+ *     request(). Not all parameters are guaranteed to be applied.
  */
 export class Client {
   constructor({apiKey,
@@ -36,6 +40,8 @@ export class Client {
                downloadDir=process.cwd(),
                fs=defaultFs,
                request=defaultRequest,
+               proxyServer,
+               requestConfig,
                validateProgress}) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
@@ -45,6 +51,8 @@ export class Client {
     this.debugLogging = debugLogging;
     this.logger = logger;
     this.downloadDir = downloadDir;
+    this.proxyServer = proxyServer;
+    this.requestConfig = requestConfig || {};
 
     // Set up external dependencies, allowing for overrides.
     this._validateProgress = validateProgress || new PseudoProgress({
@@ -393,11 +401,14 @@ export class Client {
    *                  for `request(conf)`, `request.get(conf)`, etc.
    */
   configureRequest(requestConf) {
-    requestConf = {...requestConf};
+    requestConf = {...this.requestConfig, ...requestConf};
     if (!requestConf.url) {
       throw new Error("request URL was not specified");
     }
     requestConf.url = this.absoluteURL(requestConf.url);
+    if (this.proxyServer) {
+      requestConf.proxy = this.proxyServer;
+    }
 
     var authToken = jwt.sign({iss: this.apiKey}, this.apiSecret, {
       algorithm: "HS256",
@@ -511,7 +522,7 @@ export class Client {
       }
       return val;
     });
-    this.logger.log(...args);
+    this.logger.log("[sign-addon]", ...args);
   }
 }
 

@@ -109,13 +109,33 @@ describe("sign", function() {
   });
 
   it("can turn on debug logging", () => {
-    runSignCmd({
+    return runSignCmd({
       cmdOptions: {
         verbose: true,
       },
     }).then(function() {
       expect(fakeClientContructor.firstCall.args[0].debugLogging)
         .to.be.equal(true);
+    });
+  });
+
+  it("can configure an API proxy", () => {
+    const apiProxy = "http://yourproxy:6000";
+    return runSignCmd({
+      cmdOptions: {apiProxy},
+    }).then(function() {
+      expect(fakeClientContructor.firstCall.args[0].proxyServer)
+        .to.be.equal(apiProxy);
+    });
+  });
+
+  it("can configure an API request", () => {
+    const apiRequestConfig = {tunnel: true};
+    return runSignCmd({
+      cmdOptions: {apiRequestConfig},
+    }).then(function() {
+      expect(fakeClientContructor.firstCall.args[0].requestConfig)
+        .to.be.deep.equal(apiRequestConfig);
     });
   });
 
