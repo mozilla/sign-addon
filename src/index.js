@@ -37,9 +37,6 @@ export default function signAddon(
       if (!xpiPath) {
         reportEmpty("xpiPath");
       }
-      if (!id) {
-        reportEmpty("id");
-      }
       if (!version) {
         reportEmpty("version");
       }
