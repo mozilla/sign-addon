@@ -613,8 +613,15 @@ describe("amoClient.Client", function() {
         var data = jwt.verify(token, this.client.apiSecret);
         expect(data.iss).to.be.equal(this.client.apiKey);
         expect(data).to.have.keys(["iss", "iat", "exp"]);
-        expect(call.conf).to.be.deep.equal(
-            this.client.configureRequest(request));
+
+        // Check that the request was configured with all appropriate headers.
+        // However, omit the Authorization header since we already verified that
+        // above with jwt.verify(). More importantly, the generation of the
+        // Authorization header relies on a timestamp so it's not predictable.
+        const expectedConf =  this.client.configureRequest(request);
+        delete expectedConf.headers.Authorization;
+        delete call.conf.headers.Authorization;
+        expect(call.conf).to.be.deep.equal(expectedConf);
       });
     });
 
