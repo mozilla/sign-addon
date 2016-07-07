@@ -137,11 +137,38 @@ and link back to `sign-addon`:
 
 `web-ext` will now use your local version of `sign-addon`.
 
+### Writing commit messages
+
+We follow the Angular style of
+[semantic messages](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#commit)
+when writing a commit message.
+This allows us to auto-generate a changelog without too much noise in it.
+Be sure to write the commit message in past tense so it will read
+naturally as a historic changelog.
+
+Examples:
+* `feat: Added a systematic dysfunctioner`
+* `fix: Fixed hang in systematic dysfunctioner`
+* `docs: Improved contributor docs`
+* `style: Added no-console linting, cleaned up code`
+* `refactor: Split out dysfunctioner for testability`
+* `perf: Systematic dysfunctioner is now 2x faster`
+* `test: Added more tests for systematic dysfunctioner`
+* `chore: Upgraded yargs to 3.x.x`
+
+If you want to use scopes then it would look more like:
+`feat(dysfunctioner): Added --quiet option`.
+
 ### Releasing
 
 To create a new release, do the following:
 
 * Pull from master to make sure you're up to date.
+* Create a changelog by running `grunt changelog`.
+  This will output a Markdown list of all unreleased changes.
+  You can copy/paste this into the tag notes on github after the tag is created.
+  It may require some manual editing. For example, commit messages might be
+  truncated.
 * Bump the version in `package.json`.
 * Commit and push the version change.
 * Tag master (example: `git tag 0.0.1`) and run `git push --tags upstream`.
