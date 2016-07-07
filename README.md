@@ -58,6 +58,14 @@ signAddon(
     // Number of milleseconds to wait before aborting the request.
     // Default: 2 minutes.
     timeout: undefined,
+    // Optional proxy to use for all API requests,
+    // such as "http://yourproxy:6000"
+    apiProxy: undefined,
+    // Optional object to pass to request() for additional configuration.
+    // Some properties such as 'url' cannot be defined here.
+    // Available options:
+    // https://github.com/request/request#requestoptions-callback
+    apiRequestConfig: undefined,
   })
   .then(function(result) {
     if (result.success) {

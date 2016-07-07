@@ -24,6 +24,12 @@ export default function signAddon(
     timeout=undefined,
     // Absolute directory to save downloaded files in.
     downloadDir=undefined,
+    // Optional proxy to use for all API requests,
+    // such as "http://yourproxy:6000"
+    apiProxy=undefined,
+    // Optional object to pass into request() for additional configuration.
+    // Not all properties are guaranteed to be applied.
+    apiRequestConfig=undefined,
     AMOClient=DefaultAMOClient,
   }) {
 
@@ -67,6 +73,8 @@ export default function signAddon(
         downloadDir,
         debugLogging: verbose,
         signedStatusCheckTimeout: timeout,
+        proxyServer: apiProxy,
+        requestConfig: apiRequestConfig,
       });
 
       return client.sign({
