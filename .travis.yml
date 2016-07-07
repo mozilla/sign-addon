@@ -4,8 +4,11 @@ node_js:
 - '0.12'
 - '4'
 before_install:
-# Get a master branch for conventional-changelog-lint
+# Create a master branch for conventional-changelog-lint
 - git remote set-branches origin master && git fetch
+- git checkout master
+# Check out the commit that TravisCI started on:
+- git checkout -
 - npm install -g npm
 script: npm test && npm run lint-commit-msg
 notifications:
