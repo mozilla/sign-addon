@@ -193,6 +193,21 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("handles incorrect status code for error responses", function() {
+      this.client.waitForSignedAddon = () => {};
+
+      this.client._request = new MockRequest({
+        // For some reason, the API was returning errors with a 200.
+        // See https://github.com/mozilla/addons-server/issues/3097
+        httpResponse: {statusCode: 200},
+        responseBody: {error: "some server error"},
+      });
+
+      return this.sign().then((result) => {
+        expect(result.success).to.be.equal(false);
+      });
+    });
+
     it("throws an error when signing on a 500 server response", function() {
       this.client._request = new MockRequest({httpResponse: {statusCode: 500}});
 
@@ -300,6 +315,21 @@ describe("amoClient.Client", function() {
         expect(this.client._request.calls.length).to.be.equal(2);
         expect(result.success).to.be.equal(false);
       });
+    });
+
+    it("passes through status check request errors", function() {
+      this.client._request = new MockRequest({
+        httpResponse: {statusCode: 500},
+        responseError: new Error("error from status check URL"),
+      });
+
+      return this.waitForSignedAddon()
+        .then(() => {
+          throw new Error("Unexpected success");
+        })
+        .catch((error) => {
+          expect(error.message).to.include("error from status check URL");
+        });
     });
 
     it("handles complete yet inactive addons", function() {
