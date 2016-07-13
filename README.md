@@ -159,12 +159,17 @@ Examples:
 If you want to use scopes then it would look more like:
 `feat(dysfunctioner): Added --quiet option`.
 
+You can check if the commit message on your branch is formatted correctly
+by running this:
+
+    npm run changelog-lint
+
 ### Releasing
 
 To create a new release, do the following:
 
 * Pull from master to make sure you're up to date.
-* Create a changelog by running `grunt changelog`.
+* Create a changelog by running `npm run changelog`.
   This will output a Markdown list of all unreleased changes.
   You can copy/paste this into the tag notes on github after the tag is created.
   It may require some manual editing. For example, commit messages might be

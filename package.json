@@ -7,8 +7,9 @@
     "build": "node -e \"require('grunt').cli()\" null build",
     "start": "node -e \"require('grunt').cli()\" null develop",
     "lint": "node -e \"require('grunt').cli()\" null lint",
-    "lint-commit-msg": "node -e \"require('grunt').cli()\" null lint-commit-msg",
-    "test": "node -e \"require('grunt').cli()\" null test"
+    "test": "node -e \"require('grunt').cli()\" null test",
+    "changelog": "conventional-changelog -p angular -u",
+    "changelog-lint": "conventional-changelog-lint --from master"
   },
   "dependencies": {
     "babel-polyfill": "6.9.1",
@@ -46,7 +47,6 @@
     "load-grunt-configs": "1.0.0",
     "load-grunt-tasks": "3.5.0",
     "mocha": "2.5.3",
-    "semver": "5.2.0",
     "sinon": "1.17.4",
     "webpack": "1.13.1",
     "webpack-dev-server": "1.14.1"
