@@ -1,4 +1,6 @@
-import fs from "mz/fs";
+// Importing this like `import fs from "mz/fs"` was causing usage on
+// npm 2.x to throw missing dependency errors. *shrug*
+import {fs} from "mz";
 import when from "when";
 
 import {Client as DefaultAMOClient} from "./amo-client";
