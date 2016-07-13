@@ -14,7 +14,12 @@ before_install:
 - if [[ ${TRAVIS_NODE_VERSION:0:1} -gt "0" ]]; then
     npm install -g npm;
   fi
-script: npm test && npm run lint-commit-msg
+script:
+- npm test
+# Run changelog-lint but only on newer versions of Node (because of syntax errors)
+- if [[ ${TRAVIS_NODE_VERSION:0:1} -ge "4" ]]; then
+    npm run changelog-lint;
+  fi
 notifications:
   irc:
     channels:
