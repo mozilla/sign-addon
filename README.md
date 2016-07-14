@@ -7,12 +7,6 @@ Sign a Firefox add-on with Mozilla's
 
 ## Installation
 
-Your npm must be up to date (3.x or higher):
-
-    npm install --global npm
-
-Install the module:
-
     npm install sign-addon
 
 ## Getting started
@@ -107,11 +101,6 @@ Here are some notes about dealing with IDs when using `signAddon()`:
 ## Development
 
 Here's how to set up a development environment for the `sign-addon` package.
-
-Make sure your npm is up to date (3.x or higher is required):
-
-    npm install --global npm
-
 Install all requirements and run tests from the source:
 
     npm install
