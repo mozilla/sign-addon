@@ -99,14 +99,16 @@ export class Client {
     }, {
       throwOnBadResponse: false,
     }).then((responseResult) => {
-      var httpResponse = responseResult[0] || {};
-      var response = responseResult[1];
+      const httpResponse = responseResult[0] || {};
+      const response = responseResult[1] || {};
 
-      var acceptableStatuses = [200, 201, 202];
-      if (acceptableStatuses.indexOf(httpResponse.statusCode) === -1) {
-        if (typeof response === "object" && response.error) {
-          this.logger.error("Server response:", response.error,
-                            "( status:", httpResponse.statusCode, ")");
+      const acceptableStatuses = [200, 201, 202];
+      const receivedError = !!response.error;
+      if (acceptableStatuses.indexOf(httpResponse.statusCode) === -1
+          || receivedError) {
+        if (response.error) {
+          this.logger.error(`Server response: ${response.error}`,
+                            `(status: ${httpResponse.statusCode})`);
           return {success: false};
         }
 
@@ -145,7 +147,7 @@ export class Client {
       var nextStatusCheck;
 
       const checkSignedStatus = () => {
-        this.get({url: statusUrl}).then((result) => {
+        return this.get({url: statusUrl}).then((result) => {
           var data = result[1];
           lastStatusResponse = data;
 
@@ -204,7 +206,7 @@ export class Client {
         });
       };
 
-      checkSignedStatus();
+      checkSignedStatus().catch(reject);
 
       statusCheckTimeout = opt.setAbortTimeout(() => {
         this._validateProgress.finish();
@@ -445,7 +447,7 @@ export class Client {
     method = method.toLowerCase();
     return when.promise((resolve) => {
       requestConf = this.configureRequest(requestConf);
-      this.debug("[API] ->", requestConf);
+      this.debug(`[API] ${method.toUpperCase()} request:\n`, requestConf);
 
       // Get the caller, like request.get(), request.put() ...
       var requestMethod = this._request[method].bind(this._request);
@@ -483,7 +485,8 @@ export class Client {
           this.logger.log("Failed to parse JSON response from server:", e);
         }
       }
-      this.debug("[API] <-",
+      this.debug(`[API] ${method.toUpperCase()} response:\n`,
+                 `Status: ${httpResponse.statusCode}\n`,
                  {headers: httpResponse.headers, response: body});
 
       return [httpResponse, body];
