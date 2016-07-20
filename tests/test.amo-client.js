@@ -472,6 +472,42 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("fails for 404 signed file downloads", function() {
+      const fakeResponse = {
+        on: function(event, handler) {
+          if (event === "response") {
+            // Respond with a 404 to this signed file download.
+            handler({
+              statusCode: 404,
+              headers: {},
+            });
+          }
+          return this;
+        },
+        pipe: function() {
+          return this;
+        },
+      };
+
+      const files = signedResponse().responseBody.files;
+      const fakeRequest = sinon.spy(() => fakeResponse);
+      const {createWriteStream} = getDownloadStubs();
+
+      return this.client.downloadSignedFiles(files, {
+        request: fakeRequest,
+        createWriteStream,
+        stdout: {
+          write: function() {},
+        },
+      }).then(() => {
+        throw new Error("Unexpected success");
+      }, (error) => {
+        expect(error.message).to.include("Got a 404 response when downloading");
+        expect(files[0].download_url).to.not.be.undefined;
+        expect(error.message).to.include(files[0].download_url);
+      });
+    });
+
     it("configures a download destination in the contructor", function() {
       let downloadDir = "/some/fake/destination-dir/";
       let client = this.newClient({downloadDir});

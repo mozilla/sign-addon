@@ -263,14 +263,20 @@ export class Client {
         var fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
         var out = createWriteStream(fileName);
 
-        request(this.configureRequest({
+        request(
+          this.configureRequest({
             method: "GET",
             url: fileUrl,
             followRedirect: true,
           }))
           .on("error", reject)
-          .on("response", function(data) {
-            var contentLength = data.headers["content-length"];
+          .on("response", (response) => {
+            if (response.statusCode < 200 || response.statusCode >= 300) {
+              throw new Error(
+                `Got a ${response.statusCode} response ` +
+                `when downloading ${fileUrl}`);
+            }
+            const contentLength = response.headers["content-length"];
             if (contentLength) {
               dataExpected += parseInt(contentLength);
             }
@@ -288,8 +294,6 @@ export class Client {
         });
       });
     };
-
-    // TODO: handle 404 downloads
 
     return when.promise((resolve, reject) => {
       var foundUnsignedFiles = false;
