@@ -20,7 +20,7 @@
     "mz": "2.4.0",
     "request": "2.73.0",
     "source-map-support": "0.4.2",
-    "stream-to-promise": "2.1.1",
+    "stream-to-promise": "2.2.0",
     "when": "3.7.7"
   },
   "devDependencies": {
