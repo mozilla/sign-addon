@@ -158,14 +158,18 @@ by running this:
 To create a new release, do the following:
 
 * Pull from master to make sure you're up to date.
-* Create a changelog by running `npm run changelog`.
-  This will output a Markdown list of all unreleased changes.
-  You can copy/paste this into the tag notes on github after the tag is created.
-  It may require some manual editing. For example, commit messages might be
-  truncated.
 * Bump the version in `package.json`.
-* Commit and push the version change.
-* Tag master (example: `git tag 0.0.1`) and run `git push --tags upstream`.
-* When TravisCI builds the tag,
+* Commit and push the version change
+  (or create and merge a pull request for it).
+* Create a changelog by running `npm run changelog`.
+  This will output Markdown of all unreleased changes.
+* Create a [new release](https://github.com/mozilla/sign-addon/releases/new)
+  and paste in the changelog Markdown.
+  It may require some manual editing. For example, some commit messages
+  might have been truncated.
+  Title the github release after the new version you just
+  added in the previous commit to `package.json` (example: `1.0.4`).
+* When you publish the release, github creates a tag.
+  When TravisCI builds the tag,
   it will automatically publish the package to
-  [npm](https://www.npmjs.com/package/sign-addon):
+  [npm](https://www.npmjs.com/package/sign-addon).
