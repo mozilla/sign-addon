@@ -45,7 +45,7 @@
     "grunt-newer": "1.2.0",
     "grunt-webpack": "1.0.14",
     "load-grunt-configs": "1.0.0",
-    "load-grunt-tasks": "3.5.0",
+    "load-grunt-tasks": "3.5.1",
     "mocha": "3.0.2",
     "sinon": "1.17.5",
     "webpack": "1.13.1",
