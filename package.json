@@ -12,7 +12,7 @@
     "changelog-lint": "conventional-changelog-lint --from master"
   },
   "dependencies": {
-    "babel-polyfill": "6.9.1",
+    "babel-polyfill": "6.16.0",
     "deepcopy": "0.6.3",
     "es6-error": "3.1.0",
     "es6-promisify": "5.0.0",
