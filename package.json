@@ -15,7 +15,7 @@
     "babel-polyfill": "6.9.1",
     "deepcopy": "0.6.3",
     "es6-error": "3.1.0",
-    "es6-promisify": "4.1.0",
+    "es6-promisify": "5.0.0",
     "jsonwebtoken": "7.1.9",
     "mz": "2.4.0",
     "request": "2.75.0",
