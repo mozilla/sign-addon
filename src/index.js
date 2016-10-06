@@ -20,18 +20,21 @@ export default function signAddon(
     apiSecret,
     // Optional arguments:
     apiUrlPrefix="https://addons.mozilla.org/api/v3",
+    // Number of seconds until the JWT token for the API request expires.
+    // This must match the expiration time that the API server accepts.
+    apiJwtExpiresIn,
     verbose=false,
     // Number of milleseconds to wait before giving up on a
     // response from Mozilla's web service.
-    timeout=undefined,
+    timeout,
     // Absolute directory to save downloaded files in.
-    downloadDir=undefined,
+    downloadDir,
     // Optional proxy to use for all API requests,
     // such as "http://yourproxy:6000"
-    apiProxy=undefined,
+    apiProxy,
     // Optional object to pass into request() for additional configuration.
     // Not all properties are guaranteed to be applied.
-    apiRequestConfig=undefined,
+    apiRequestConfig,
     AMOClient=DefaultAMOClient,
   }) {
 
@@ -72,6 +75,7 @@ export default function signAddon(
         apiKey,
         apiSecret,
         apiUrlPrefix,
+        apiJwtExpiresIn,
         downloadDir,
         debugLogging: verbose,
         signedStatusCheckTimeout: timeout,

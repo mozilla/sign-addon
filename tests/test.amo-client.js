@@ -712,6 +712,39 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("lets you configure the jwt expiration", function() {
+      const expiresIn = 60 * 15; // 15 minutes
+      const cli = this.newClient({
+        apiJwtExpiresIn: expiresIn,
+      });
+
+      const fakeJwt = {
+        sign: sinon.spy(() => "<JWT token>"),
+      };
+      cli.configureRequest({url: "/somewhere"}, {
+        jwt: fakeJwt,
+      });
+
+      expect(fakeJwt.sign.called).to.be.equal(true);
+      // Make sure the JWT expiration is customizable.
+      expect(fakeJwt.sign.args[0][2].expiresIn).to.be.equal(expiresIn);
+    });
+
+    it("configures a default jwt expiration", function() {
+      const defaultExpiry = 60 * 5; // 5 minutes
+      const cli = this.newClient();
+
+      const fakeJwt = {
+        sign: sinon.spy(() => "<JWT token>"),
+      };
+      cli.configureRequest({url: "/somewhere"}, {
+        jwt: fakeJwt,
+      });
+
+      expect(fakeJwt.sign.called).to.be.equal(true);
+      expect(fakeJwt.sign.args[0][2].expiresIn).to.be.equal(defaultExpiry);
+    });
+
     it("lets you configure a request directly", function() {
       var conf = this.client.configureRequest({url: "/path"});
       expect(conf).to.have.keys(["headers", "url"]);

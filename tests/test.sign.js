@@ -97,6 +97,18 @@ describe("sign", function() {
     });
   });
 
+  it("passes JWT expiration to the signing client", () => {
+    const expiresIn = 60 * 15; // 15 minutes
+    return runSignCmd({
+      cmdOptions: {
+        apiJwtExpiresIn: expiresIn,
+      },
+    }).then(() => {
+      expect(fakeClientContructor.firstCall.args[0].apiJwtExpiresIn)
+        .to.be.equal(expiresIn);
+    });
+  });
+
   it("throws an error for XPI file errors", () => {
     return runSignCmd({
       throwError: false,
