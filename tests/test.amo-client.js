@@ -747,7 +747,7 @@ describe("amoClient.Client", function() {
 
     it("lets you configure a request directly", function() {
       var conf = this.client.configureRequest({url: "/path"});
-      expect(conf).to.have.keys(["headers", "url"]);
+      expect(conf).to.have.keys(["headers", "timeout", "url"]);
       expect(conf.headers).to.have.keys(["Accept", "Authorization"]);
     });
 
@@ -794,6 +794,20 @@ describe("amoClient.Client", function() {
 
       });
       return when.all(requests);
+    });
+
+    it("configures a request timeout based on JWT expiration", function() {
+      // Set a custom JWT expiration:
+      const expiresIn = 60 * 15; // 15 minutes
+      const cli = this.newClient({
+        apiJwtExpiresIn: expiresIn,
+      });
+
+      const config = cli.configureRequest({url: "/somewhere"});
+
+      // Make sure the request is configured to timeout after the
+      // JWT token times out.
+      expect(config.timeout).to.be.above(expiresIn * 1000);
     });
 
     it("requires a URL", function() {

@@ -429,6 +429,10 @@ export class Client {
       expiresIn: this.apiJwtExpiresIn,
     });
 
+    // Make sure the request won't time out before the JWT expires.
+    // This may be useful for slow file uploads.
+    requestConf.timeout = (this.apiJwtExpiresIn * 1000) + 500;
+
     requestConf.headers = {
       Authorization: "JWT " + authToken,
       Accept: "application/json",
