@@ -60,6 +60,10 @@ signAddon(
     // Available options:
     // https://github.com/request/request#requestoptions-callback
     apiRequestConfig: undefined,
+    // Optional override to the number of seconds until the JWT token for
+    // the API request expires. This must match the expiration time that
+    // the API server accepts.
+    apiJwtExpiresIn: undefined,
   })
   .then(function(result) {
     if (result.success) {
