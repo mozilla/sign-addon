@@ -712,9 +712,42 @@ describe("amoClient.Client", function() {
       });
     });
 
+    it("lets you configure the jwt expiration", function() {
+      const expiresIn = 60 * 15; // 15 minutes
+      const cli = this.newClient({
+        apiJwtExpiresIn: expiresIn,
+      });
+
+      const fakeJwt = {
+        sign: sinon.spy(() => "<JWT token>"),
+      };
+      cli.configureRequest({url: "/somewhere"}, {
+        jwt: fakeJwt,
+      });
+
+      expect(fakeJwt.sign.called).to.be.equal(true);
+      // Make sure the JWT expiration is customizable.
+      expect(fakeJwt.sign.args[0][2].expiresIn).to.be.equal(expiresIn);
+    });
+
+    it("configures a default jwt expiration", function() {
+      const defaultExpiry = 60 * 5; // 5 minutes
+      const cli = this.newClient();
+
+      const fakeJwt = {
+        sign: sinon.spy(() => "<JWT token>"),
+      };
+      cli.configureRequest({url: "/somewhere"}, {
+        jwt: fakeJwt,
+      });
+
+      expect(fakeJwt.sign.called).to.be.equal(true);
+      expect(fakeJwt.sign.args[0][2].expiresIn).to.be.equal(defaultExpiry);
+    });
+
     it("lets you configure a request directly", function() {
       var conf = this.client.configureRequest({url: "/path"});
-      expect(conf).to.have.keys(["headers", "url"]);
+      expect(conf).to.have.keys(["headers", "timeout", "url"]);
       expect(conf.headers).to.have.keys(["Accept", "Authorization"]);
     });
 
@@ -761,6 +794,20 @@ describe("amoClient.Client", function() {
 
       });
       return when.all(requests);
+    });
+
+    it("configures a request timeout based on JWT expiration", function() {
+      // Set a custom JWT expiration:
+      const expiresIn = 60 * 15; // 15 minutes
+      const cli = this.newClient({
+        apiJwtExpiresIn: expiresIn,
+      });
+
+      const config = cli.configureRequest({url: "/somewhere"});
+
+      // Make sure the request is configured to timeout after the
+      // JWT token times out.
+      expect(config.timeout).to.be.above(expiresIn * 1000);
     });
 
     it("requires a URL", function() {

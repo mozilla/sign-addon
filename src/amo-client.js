@@ -2,7 +2,7 @@ import deepcopy from "deepcopy";
 import {default as defaultFs} from "fs";
 import url from "url";
 import path from "path";
-import jwt from "jsonwebtoken";
+import defaultJwt from "jsonwebtoken";
 import {default as defaultRequest} from "request";
 import when from "when";
 import nodefn from "when/node";
@@ -17,6 +17,9 @@ const defaultClearInterval = clearInterval;
  *   - `apiKey`: API key string from the Developer Hub.
  *   - `apiSecret`: API secret string from the Developer Hub.
  *   - `apiUrlPrefix`: API URL prefix, including any leading paths.
+ *   - `apiJwtExpiresIn`: Number of seconds until the JWT token for the API
+ *     request expires. This must match the expiration time that the API
+ *     server accepts.
  *   - `signedStatusCheckInterval`: A period in millesconds between
  *     checks when waiting on add-on signing.
  *   - `signedStatusCheckTimeout`: A length in millesconds to give up
@@ -33,6 +36,10 @@ export class Client {
   constructor({apiKey,
                apiSecret,
                apiUrlPrefix,
+               // TODO: put this back to something sane after we
+               // address the file upload issue on AMO:
+               // https://github.com/mozilla/addons-server/issues/3688
+               apiJwtExpiresIn=60 * 5,  // 5 minutes
                debugLogging=false,
                signedStatusCheckInterval=1000,
                signedStatusCheckTimeout=120000,  // 2 minutes.
@@ -46,6 +53,7 @@ export class Client {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
     this.apiUrlPrefix = apiUrlPrefix;  // default set in CLI options.
+    this.apiJwtExpiresIn = apiJwtExpiresIn;
     this.signedStatusCheckInterval = signedStatusCheckInterval;
     this.signedStatusCheckTimeout = signedStatusCheckTimeout;
     this.debugLogging = debugLogging;
@@ -406,7 +414,7 @@ export class Client {
    * @return {Object} new requestConf object suitable
    *                  for `request(conf)`, `request.get(conf)`, etc.
    */
-  configureRequest(requestConf) {
+  configureRequest(requestConf, {jwt=defaultJwt}={}) {
     requestConf = {...this.requestConfig, ...requestConf};
     if (!requestConf.url) {
       throw new Error("request URL was not specified");
@@ -418,8 +426,12 @@ export class Client {
 
     var authToken = jwt.sign({iss: this.apiKey}, this.apiSecret, {
       algorithm: "HS256",
-      expiresIn: 60,
+      expiresIn: this.apiJwtExpiresIn,
     });
+
+    // Make sure the request won't time out before the JWT expires.
+    // This may be useful for slow file uploads.
+    requestConf.timeout = (this.apiJwtExpiresIn * 1000) + 500;
 
     requestConf.headers = {
       Authorization: "JWT " + authToken,
