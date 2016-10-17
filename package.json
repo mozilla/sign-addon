@@ -35,7 +35,7 @@
     "chai": "3.5.0",
     "conventional-changelog-cli": "1.2.0",
     "conventional-changelog-lint": "1.0.1",
-    "eslint": "3.7.1",
+    "eslint": "3.8.0",
     "grunt": "1.0.1",
     "grunt-contrib-clean": "1.0.0",
     "grunt-contrib-copy": "1.0.0",
