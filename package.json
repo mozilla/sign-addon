@@ -17,7 +17,7 @@
     "es6-error": "4.0.0",
     "es6-promisify": "5.0.0",
     "jsonwebtoken": "7.1.9",
-    "mz": "2.4.0",
+    "mz": "2.5.0",
     "request": "2.78.0",
     "source-map-support": "0.4.4",
     "stream-to-promise": "2.2.0",
