@@ -19,7 +19,7 @@
     "jsonwebtoken": "7.1.9",
     "mz": "2.5.0",
     "request": "2.78.0",
-    "source-map-support": "0.4.4",
+    "source-map-support": "0.4.6",
     "stream-to-promise": "2.2.0",
     "when": "3.7.7"
   },
