@@ -54,6 +54,8 @@ signAddon(
     timeout: undefined,
     // Optional proxy to use for all API requests,
     // such as "http://yourproxy:6000"
+    // Read this for details on how proxy requests work:
+    // https://github.com/request/request#proxies
     apiProxy: undefined,
     // Optional object to pass to request() for additional configuration.
     // Some properties such as 'url' cannot be defined here.
