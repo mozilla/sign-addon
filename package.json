@@ -60,5 +60,11 @@
   "bugs": {
     "url": "https://github.com/mozilla/sign-addon/issues"
   },
-  "homepage": "https://github.com/mozilla/sign-addon#readme"
+  "homepage": "https://github.com/mozilla/sign-addon#readme",
+  "keywords": [
+    "add on",
+    "sign",
+    "firefox",
+    "web service"
+  ]
 }
