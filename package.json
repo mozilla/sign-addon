@@ -62,9 +62,9 @@
   },
   "homepage": "https://github.com/mozilla/sign-addon#readme",
   "keywords": [
-    "add on",
+    "AddOn",
     "sign",
     "firefox",
-    "web service"
+    "WebService"
   ]
 }
