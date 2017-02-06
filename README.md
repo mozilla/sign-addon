@@ -66,6 +66,9 @@ signAddon(
     // the API request expires. This must match the expiration time that
     // the API server accepts.
     apiJwtExpiresIn: undefined,
+    // Optional override to the URL prefix of the signing API.
+    // The production instance of the API will be used by default.
+    apiUrlPrefix: 'https://addons.mozilla.org/api/v3',
   })
   .then(function(result) {
     if (result.success) {
