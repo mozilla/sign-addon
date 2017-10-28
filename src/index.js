@@ -38,7 +38,7 @@ export default function signAddon(
     AMOClient=DefaultAMOClient,
   }) {
 
-  return when.promise(
+  return new Promise(
     (resolve) => {
 
       function reportEmpty(name) {

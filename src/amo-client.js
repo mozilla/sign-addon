@@ -4,7 +4,6 @@ import url from "url";
 import path from "path";
 import defaultJwt from "jsonwebtoken";
 import {default as defaultRequest} from "request";
-import when from "when";
 import nodefn from "when/node";
 
 const defaultSetInterval = setInterval;
@@ -266,7 +265,7 @@ export class Client {
     }
 
     const download = (fileUrl) => {
-      return when.promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         // The API will give us a signed file named in a sane way.
         var fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
         var out = createWriteStream(fileName);
@@ -303,7 +302,7 @@ export class Client {
       });
     };
 
-    return when.promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       var foundUnsignedFiles = false;
       signedFiles.forEach((file) => {
         if (file.signed) {
@@ -320,7 +319,7 @@ export class Client {
             "Some files were not signed. Re-run with --verbose for details.");
         }
         showProgress();
-        resolve(when.all(allDownloads));
+        resolve(Promise.all(allDownloads));
       } else {
         reject(new Error(
           "The XPI was processed but no signed files were found. Check your " +
@@ -461,7 +460,7 @@ export class Client {
    */
   request(method, requestConf, {throwOnBadResponse=true} = {}) {
     method = method.toLowerCase();
-    return when.promise((resolve) => {
+    return new Promise((resolve) => {
       requestConf = this.configureRequest(requestConf);
       this.debug(`[API] ${method.toUpperCase()} request:\n`, requestConf);
 
