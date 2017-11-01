@@ -54,6 +54,8 @@ signAddon(
     timeout: undefined,
     // Optional proxy to use for all API requests,
     // such as "http://yourproxy:6000"
+    // Read this for details on how proxy requests work:
+    // https://github.com/request/request#proxies
     apiProxy: undefined,
     // Optional object to pass to request() for additional configuration.
     // Some properties such as 'url' cannot be defined here.
@@ -64,6 +66,9 @@ signAddon(
     // the API request expires. This must match the expiration time that
     // the API server accepts.
     apiJwtExpiresIn: undefined,
+    // Optional override to the URL prefix of the signing API.
+    // The production instance of the API will be used by default.
+    apiUrlPrefix: 'https://addons.mozilla.org/api/v3',
   })
   .then(function(result) {
     if (result.success) {
