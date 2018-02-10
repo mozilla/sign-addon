@@ -77,12 +77,13 @@ export class Client {
    *   - `xpiPath` Path to xpi file.
    *   - `guid` Optional add-on GUID, aka the ID in install.rdf.
    *   - `version` add-on version string.
+   *   - `channel` release channel (listed, unlisted).
    * @return {Promise} signingResult with keys:
    *   - success: boolean
    *   - downloadedFiles: Array of file objects
    *   - id: string identifier for the signed add-on
    */
-  sign({guid, version, xpiPath}) {
+  sign({guid, version, channel, xpiPath}) {
 
     const formData = {
       upload: this._fs.createReadStream(xpiPath),
@@ -93,11 +94,20 @@ export class Client {
       // PUT to a specific URL for this add-on + version.
       addonUrl += encodeURIComponent(guid) +
         "/versions/" + encodeURIComponent(version) + "/";
+      if (channel) {
+        formData.channel = channel;
+      }
     } else {
       // POST to a generic URL to create a new add-on.
       this.debug("Signing add-on without an ID");
       method = "post";
       formData.version = version;
+      if (channel) {
+        this.logger.warn(
+          "Specifying a channel for a new add-on is unsupported. " +
+          "New add-ons are always in the unlisted channel."
+        );
+      }
     }
 
     const doRequest = this[method].bind(this);
