@@ -82,13 +82,17 @@ export class Client {
    *   - downloadedFiles: Array of file objects
    *   - id: string identifier for the signed add-on
    */
-  sign({guid, version, xpiPath}) {
+  sign({guid, version, xpiPath, channel}) {
 
     const formData = {
       upload: this._fs.createReadStream(xpiPath),
     };
     let addonUrl = "/addons/";
     let method = "put";
+    if (channel) {
+      // optionally specify a channel ('listed' or 'unlisted')
+      formData.channel = channel;
+    }
     if (guid) {
       // PUT to a specific URL for this add-on + version.
       addonUrl += encodeURIComponent(guid) +
