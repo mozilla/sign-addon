@@ -36,6 +36,8 @@ export default function signAddon(
     // Not all properties are guaranteed to be applied.
     apiRequestConfig,
     AMOClient=DefaultAMOClient,
+    // Optional string to specify channel 'listed' or 'unlisted'
+    channel,
   }) {
 
   return when.promise(
@@ -87,6 +89,7 @@ export default function signAddon(
         xpiPath: xpiPath,
         guid: id,
         version: version,
+        channel: channel,
       });
 
     });
