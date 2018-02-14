@@ -46,6 +46,10 @@ signAddon(
     // WebExtensions do not require an ID.
     // See the notes below about dealing with IDs.
     id: 'your-addon-id@somewhere',
+    // The release channel (listed or unlisted).
+    // Ignored for new add-ons, which are always unlisted.
+    // Default: most recently used channel.
+    channel: undefined,
     // Save downloaded files to this directory.
     // Default: current working directory.
     downloadDir: undefined,

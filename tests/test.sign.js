@@ -97,6 +97,16 @@ describe("sign", function() {
     });
   });
 
+  it("passes release channel to the signer", () => {
+    const channel = "listed";
+    return runSignCmd({
+      cmdOptions: {channel},
+    }).then(function() {
+      expect(signingCall.called).to.be.equal(true);
+      expect(signingCall.firstCall.args[0].channel).to.be.equal(channel);
+    });
+  });
+
   it("passes JWT expiration to the signing client", () => {
     const expiresIn = 60 * 15; // 15 minutes
     return runSignCmd({

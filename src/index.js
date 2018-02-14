@@ -24,6 +24,10 @@ export default function signAddon(
     // This must match the expiration time that the API server accepts.
     apiJwtExpiresIn,
     verbose=false,
+    // The release channel (listed or unlisted).
+    // Ignored for new add-ons, which are always unlisted.
+    // Defaults to most recently used channel.
+    channel,
     // Number of milleseconds to wait before giving up on a
     // response from Mozilla's web service.
     timeout,
@@ -87,6 +91,7 @@ export default function signAddon(
         xpiPath: xpiPath,
         guid: id,
         version: version,
+        channel: channel,
       });
 
     });

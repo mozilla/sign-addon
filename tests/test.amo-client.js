@@ -138,6 +138,8 @@ describe("amoClient.Client", function() {
         expect(putCall.conf.formData.upload).to.be.equal("fake-read-stream");
         // When doing a PUT, the version is in the URL not the form data.
         expect(putCall.conf.formData.version).to.be.undefined;
+        // When no channel is supplied, the API is expected to use the most recent channel.
+        expect(putCall.conf.formData.channel).to.be.undefined;
 
         expect(waitForSignedAddon.called).to.be.equal(true);
         expect(waitForSignedAddon.firstCall.args[0])
@@ -171,10 +173,47 @@ describe("amoClient.Client", function() {
         expect(call.conf.url).to.match(/\/addons\/$/);
         expect(call.conf.formData.upload).to.be.equal("fake-read-stream");
         expect(call.conf.formData.version).to.be.equal(conf.version);
+        // Channel is not a valid parameter for new add-ons.
+        expect(call.conf.formData.channel).to.be.undefined;
 
         expect(waitForSignedAddon.called).to.be.equal(true);
         expect(waitForSignedAddon.firstCall.args[0])
           .to.be.equal(apiStatusUrl);
+      });
+    });
+
+    it("lets you sign an add-on on a specific channel", function() {
+      var conf = {
+        channel: "listed",
+      };
+      var waitForSignedAddon = sinon.spy(() => {});
+      this.client.waitForSignedAddon = waitForSignedAddon;
+
+      this.client._request = new MockRequest({
+        httpResponse: {statusCode: 202},
+      });
+
+      return this.sign(conf).then(() => {
+        expect(this.client._request.calls[0].conf.formData.channel)
+          .to.be.equal("listed");
+      });
+    });
+
+    it("lets you sign an add-on without an ID ignoring channel", function() {
+      var conf = {
+        guid: null,
+        channel: "listed",
+      };
+      var waitForSignedAddon = sinon.spy(() => {});
+      this.client.waitForSignedAddon = waitForSignedAddon;
+
+      this.client._request = new MockRequest({
+        httpResponse: {statusCode: 202},
+      });
+
+      return this.sign(conf).then(() => {
+        expect(this.client._request.calls[0].conf.formData.channel)
+          .to.be.undefined;
       });
     });
 
