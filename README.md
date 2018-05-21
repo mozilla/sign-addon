@@ -1,5 +1,7 @@
 # Sign Add-on
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/mozilla/sign-addon.svg)](https://greenkeeper.io/)
+
 Sign a Firefox add-on with Mozilla's
 [web service](http://addons-server.readthedocs.org/en/latest/topics/api/signing.html).
 
