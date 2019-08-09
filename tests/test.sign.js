@@ -2,7 +2,6 @@ import {beforeEach, describe, it} from "mocha";
 import path from "path";
 import {expect} from "chai";
 import sinon from "sinon";
-import when from "when";
 
 import {signAddonAndExit} from "../src";
 
@@ -38,7 +37,7 @@ describe("sign", function() {
       this.debug = function() {};
     }
 
-    signingCall = sinon.spy(() => when.promise((resolve) => {
+    signingCall = sinon.spy(() => new Promise((resolve) => {
       if (options.errorToThrow) {
         throw options.errorToThrow;
       }

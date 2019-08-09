@@ -1,7 +1,6 @@
 // Importing this like `import fs from "mz/fs"` was causing usage on
 // npm 2.x to throw missing dependency errors. *shrug*
 import {fs} from "mz";
-import when from "when";
 
 import {Client as DefaultAMOClient} from "./amo-client";
 
@@ -42,7 +41,7 @@ export default function signAddon(
     AMOClient=DefaultAMOClient,
   }) {
 
-  return when.promise(
+  return new Promise(
     (resolve) => {
 
       function reportEmpty(name) {
