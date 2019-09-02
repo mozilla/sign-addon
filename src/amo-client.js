@@ -482,7 +482,13 @@ export class Client {
       //   // promise gets resolved here
       // })
       //
-      resolve(requestMethod(requestConf));
+      resolve(requestMethod(requestConf, (error, response, body) => {
+        return new Promise((res, rej) => {
+          if (error) { rej(error); }
+
+          res([response, body]);
+        });
+      }));
     }).then((responseResult) => {
       var httpResponse = responseResult[0];
       var body = responseResult[1];
