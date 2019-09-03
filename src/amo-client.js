@@ -673,9 +673,10 @@ export function formatResponse(response, options) {
     ...options,
   };
   var prettyResponse = response;
+  var stringify = options._stringifyToJson || JSON.stringify;
   if (typeof prettyResponse === "object") {
     try {
-      prettyResponse = JSON.stringify(prettyResponse);
+      prettyResponse = stringify(prettyResponse);
     } catch (e) {
       //
     }

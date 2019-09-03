@@ -969,7 +969,11 @@ describe("amoClient.formatResponse", function() {
   });
 
   it("ignores broken JSON objects", function() {
-    var res = amoClient.formatResponse({unserializable: process});  // any complex object
+    var stub = sinon.stub().throws();
+    var res = amoClient.formatResponse(
+      {unserializable: process}, // any complex object
+      {_stringifyToJson: stub}
+    );
     expect(res).to.be.equal("[object Object]");
   });
 
