@@ -16,7 +16,7 @@ secret, from the
 [AMO Developer Hub](https://addons.mozilla.org/en-US/developers/addon/api/key/).
 
 Currently, this is intended for use in [NodeJS](https://nodejs.org/) only
-and should work in 0.12 or higher.
+and should work in version 8 or higher.
 
 ## Command line use
 
