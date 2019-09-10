@@ -21,7 +21,7 @@
     "request": "2.88.0",
     "source-map-support": "0.4.6",
     "stream-to-promise": "2.2.0",
-    "when": "3.7.7"
+    "when": "3.7.8"
   },
   "devDependencies": {
     "babel-core": "6.18.2",
