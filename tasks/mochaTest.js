@@ -3,5 +3,5 @@ module.exports = {
     timeout: 3000,
     reporter: 'spec',
   },
-  all: ['dist/tests.js'],
+  src: ['dist/tests.js'],
 };

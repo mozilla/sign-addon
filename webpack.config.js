@@ -27,25 +27,30 @@ module.exports = {
     libraryTarget: 'commonjs2',
   },
   module: {
-    loaders: [
-      {
-        exclude: /(node_modules|bower_components)/,
-        test: /\.js$/,
+    rules: [{
+      test: /\.js$/,
+      use: {
         // babel options are in .babelrc
-        loaders: ['babel'],
+        loader: 'babel-loader',
       },
-    ],
+      exclude: /(node_modules|bower_components)/,
+    }],
   },
   externals: nodeModules,
   plugins: [
     // for when: https://github.com/webpack/webpack/issues/353
-    new webpack.IgnorePlugin(/vertx/),
-    new webpack.BannerPlugin('require("source-map-support").install();',
-                             { raw: true, entryOnly: false }),
+    new webpack.IgnorePlugin({
+      resourceRegExp: /vertx/
+    }),
+    new webpack.BannerPlugin({
+      banner: 'require("source-map-support").install();',
+      raw: true,
+      entryOnly: false
+    }),
   ],
   resolve: {
-    extensions: ['', '.js', '.json'],
-    modulesDirectories: [
+    extensions: ['.js', '.json'],
+    modules: [
       'src',
       'node_modules',
     ],

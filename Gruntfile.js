@@ -9,11 +9,10 @@ module.exports = function(grunt) {
 
   // This loads all grunt tasks matching the grunt-*, @*/grunt-* patterns.
   require("load-grunt-tasks")(grunt);
+  var path = require("path");
 
-  var configs = require("load-grunt-configs")(grunt, {
-    config: {
-      src: "tasks/*.js",
-    },
+  var configs = require("load-grunt-config")(grunt, {
+    configPath: path.join(process.cwd(), "tasks"),
   });
   grunt.initConfig(configs);
 
