@@ -19,7 +19,7 @@
     "jsonwebtoken": "8.5.1",
     "mz": "2.7.0",
     "request": "2.88.0",
-    "source-map-support": "0.4.6",
+    "source-map-support": "0.5.13",
     "stream-to-promise": "2.2.0"
   },
   "devDependencies": {
