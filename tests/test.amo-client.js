@@ -3,7 +3,6 @@ import path from "path";
 import {expect} from "chai";
 import sinon from "sinon";
 import jwt from "jsonwebtoken";
-import when from "when";
 
 import * as amoClient from "../src/amo-client";
 
@@ -832,7 +831,7 @@ describe("amoClient.Client", function() {
         }));
 
       });
-      return when.all(requests);
+      return Promise.all(requests);
     });
 
     it("configures a request timeout based on JWT expiration", function() {
@@ -1082,7 +1081,7 @@ class MockRequest {
     this.responseError = conf.responseError;
   }
 
-  _mockRequest(method, conf, callback) {
+  _mockRequest(method, conf) {
     var info = {conf: conf};
     this.calls.push({...info, name: method});
     this.callMap[method] = info;
@@ -1098,27 +1097,31 @@ class MockRequest {
       response = {};
       response.responseError = new Error("Response queue is empty");
     }
-    callback(response.responseError, response.httpResponse,
-             response.responseBody);
+
+    if (response.responseError instanceof Error) {
+      throw response.responseError;
+    } else {
+      return [response.httpResponse, response.responseBody];
+    }
   }
 
-  get(conf, callback) {
-    return this._mockRequest("get", conf, callback);
+  get(conf) {
+    return this._mockRequest("get", conf);
   }
 
-  post(conf, callback) {
-    return this._mockRequest("post", conf, callback);
+  post(conf) {
+    return this._mockRequest("post", conf);
   }
 
-  put(conf, callback) {
-    return this._mockRequest("put", conf, callback);
+  put(conf) {
+    return this._mockRequest("put", conf);
   }
 
-  patch(conf, callback) {
-    return this._mockRequest("patch", conf, callback);
+  patch(conf) {
+    return this._mockRequest("patch", conf);
   }
 
-  delete(conf, callback) {
-    return this._mockRequest("delete", conf, callback);
+  delete(conf) {
+    return this._mockRequest("delete", conf);
   }
 }
