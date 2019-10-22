@@ -1081,7 +1081,7 @@ class MockRequest {
     this.responseError = conf.responseError;
   }
 
-  _mockRequest(method, conf) {
+  _mockRequest(method, conf, callback) {
     var info = {conf: conf};
     this.calls.push({...info, name: method});
     this.callMap[method] = info;
@@ -1098,30 +1098,30 @@ class MockRequest {
       response.responseError = new Error("Response queue is empty");
     }
 
-    if (response.responseError instanceof Error) {
-      throw response.responseError;
-    } else {
-      return [response.httpResponse, response.responseBody];
-    }
+    callback(
+      response.responseError,
+      response.httpResponse,
+      response.responseBody
+    );
   }
 
-  get(conf) {
-    return this._mockRequest("get", conf);
+  get(conf, callback) {
+    return this._mockRequest("get", conf, callback);
   }
 
-  post(conf) {
-    return this._mockRequest("post", conf);
+  post(conf, callback) {
+    return this._mockRequest("post", conf, callback);
   }
 
-  put(conf) {
-    return this._mockRequest("put", conf);
+  put(conf, callback) {
+    return this._mockRequest("put", conf, callback);
   }
 
-  patch(conf) {
-    return this._mockRequest("patch", conf);
+  patch(conf, callback) {
+    return this._mockRequest("patch", conf, callback);
   }
 
-  delete(conf) {
-    return this._mockRequest("delete", conf);
+  delete(conf, callback) {
+    return this._mockRequest("delete", conf, callback);
   }
 }

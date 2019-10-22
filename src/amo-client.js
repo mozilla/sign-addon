@@ -469,7 +469,7 @@ export class Client {
    */
   request(method, requestConf, {throwOnBadResponse=true} = {}) {
     method = method.toLowerCase();
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       requestConf = this.configureRequest(requestConf);
       this.debug(`[API] ${method.toUpperCase()} request:\n`, requestConf);
 
@@ -482,17 +482,15 @@ export class Client {
       //   // promise gets resolved here
       // })
       //
-      resolve(requestMethod(requestConf, (error, response, body) => {
-        return new Promise((res, rej) => {
-          if (error) { rej(error); }
+      requestMethod(requestConf, (error, httpResponse, body) => {
+        if (error) {
+          reject(error);
+          return;
+        }
 
-          res([response, body]);
-        });
-      }));
-    }).then((responseResult) => {
-      var httpResponse = responseResult[0];
-      var body = responseResult[1];
-
+        resolve([httpResponse, body]);
+      });
+    }).then(([httpResponse, body]) => {
       if (throwOnBadResponse) {
         if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
           throw new Error(
