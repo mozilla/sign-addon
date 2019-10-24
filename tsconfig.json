@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strict": true,
+    "target": "es2015",
+    "typeRoots" : ["./node_modules/@types", "./src/@types"]
+  },
+  "include": ["src/", "tests/"]
+}
