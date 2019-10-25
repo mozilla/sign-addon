@@ -10,7 +10,6 @@
     "lint": "grunt lint",
     "start": "grunt develop",
     "test": "grunt test",
-    "type-coverage": "type-coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -51,7 +50,6 @@
     "load-grunt-tasks": "5.1.0",
     "mocha": "6.2.0",
     "sinon": "7.5.0",
-    "type-coverage": "2.3.0",
     "typescript": "3.6.4",
     "webpack": "4.41.0",
     "webpack-dev-server": "3.8.1"
