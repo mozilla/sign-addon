@@ -8,29 +8,78 @@ import {default as defaultRequest} from "request";
 const defaultSetInterval = setInterval;
 const defaultClearInterval = clearInterval;
 
+/** @typedef {import("request").OptionsWithUrl} RequestConfig */
+
+/** @typedef {import("request").Response} Response */
+
 /**
- * Construct a new addons.mozilla.org API client.
+ * See: https://addons-server.readthedocs.io/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
  *
- * @param {Object} conf
- *   - `apiKey`: API key string from the Developer Hub.
- *   - `apiSecret`: API secret string from the Developer Hub.
- *   - `apiUrlPrefix`: API URL prefix, including any leading paths.
- *   - `apiJwtExpiresIn`: Number of seconds until the JWT token for the API
- *     request expires. This must match the expiration time that the API
- *     server accepts.
- *   - `signedStatusCheckInterval`: A period in millesconds between
- *     checks when waiting on add-on signing.
- *   - `signedStatusCheckTimeout`: A length in millesconds to give up
- *      if the add-on hasn't been signed.
- *   - `debugLogging`: When true, log more information
- *   - `downloadDir`: Absolute path to save downloaded files to.
- *     The working directory will be used by default.
- *   - `proxyServer`: Optional proxy server to use for all requests,
- *     such as "http://yourproxy:6000"
- *   - `requestConfig`: Optional configuration object to pass to
- *     request(). Not all parameters are guaranteed to be applied.
+ * @typedef {{
+ *   guid: string,
+ *   active: boolean,
+ *   automated_signing: boolean,
+ *   files: File[],
+ *   passed_review: boolean,
+ *   pk: string,
+ *   processed: boolean,
+ *   reviewed: boolean,
+ *   url: string,
+ *   valid: boolean,
+ *   validation_results: object,
+ *   validation_url: string,
+ *   version: string,
+ * }} SigningStatus
+ */
+
+/**
+ * addons.mozilla.org API client.
  */
 export class Client {
+  /**
+   * Type for `this.request()`.
+   *
+   * @typedef {object} RequestMethodOptions
+   * @property {boolean=} throwOnBadResponse - if true, an error will be thrown when not response status is not 2xx
+   */
+
+  /**
+   * Type for `this.request()`.
+   *
+   * @typedef {Promise<[Response, object]>} RequestMethodReturnValue
+   */
+
+  /**
+   * Type for `this.get()`, `this.post()`, etc.
+   *
+   * @typedef {(requestConf: RequestConfig, options: RequestMethodOptions) => RequestMethodReturnValue} HttpMethod
+   */
+
+  /**
+   * See: https://addons-server.readthedocs.io/en/latest/topics/api/signing.html#get--api-v4-addons-(string-guid)-versions-(string-version)-[uploads-(string-upload-pk)-]
+   *
+   * @typedef {{ signed: boolean, download_url: string, hash: string }} File
+   */
+
+  /**
+   * @typedef {object} ClientParams
+   * @property {string} apiKey - API key string from the Developer Hub
+   * @property {string} apiSecret - API secret string from the Developer Hub
+   * @property {string} apiUrlPrefix - API URL prefix, including any leading paths
+   * @property {number=} apiJwtExpiresIn - Number of seconds until the JWT token for the API request expires. This must match the expiration time that the API server accepts
+   * @property {boolean=} debugLogging - When true, log more information
+   * @property {number=} signedStatusCheckInterval - A period in millesconds between checks when waiting on add-on signing
+   * @property {number=} signedStatusCheckTimeout -  A length in millesconds to give up if the add-on hasn't been signed
+   * @property {typeof console=} logger
+   * @property {string=} downloadDir - Absolute path to save downloaded files to. The working directory will be used by default
+   * @property {typeof defaultFs=} fs
+   * @property {typeof defaultRequest=} request
+   * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
+   * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
+   * @property {PseudoProgress=} validateProgress
+   *
+   * @param {ClientParams} params
+   */
   constructor({apiKey,
                apiSecret,
                apiUrlPrefix,
@@ -71,23 +120,23 @@ export class Client {
   /**
    * Sign a new version of your add-on at addons.mozilla.org.
    *
-   * @param {Object} conf
-   *   - `xpiPath` Path to xpi file.
-   *   - `guid` Optional add-on GUID, aka the ID in install.rdf.
-   *   - `version` add-on version string.
-   *   - `channel` release channel (listed, unlisted).
-   * @return {Promise} signingResult with keys:
-   *   - success: boolean
-   *   - downloadedFiles: Array of file objects
-   *   - id: string identifier for the signed add-on
+   * @typedef {Object} SignParams
+   * @property {string=} guid - optional add-on GUID (ID in install.rdf)
+   * @property {string} version - add-on version string
+   * @property {string} channel - release channel (listed or unlisted)
+   * @property {string} xpiPath - path to xpi file
+   *
+   * @param {SignParams} signParams
+   * @returns {Promise<{ success: boolean, downloadedFiles?: string[], id?: string }>}
    */
   sign({guid, version, channel, xpiPath}) {
 
+    /** @type {object} */
     const formData = {
       upload: this._fs.createReadStream(xpiPath),
     };
     let addonUrl = "/addons/";
-    let method = "put";
+    let httpMethod = this.put;
     if (guid) {
       // PUT to a specific URL for this add-on + version.
       addonUrl += encodeURIComponent(guid) +
@@ -98,7 +147,7 @@ export class Client {
     } else {
       // POST to a generic URL to create a new add-on.
       this.debug("Signing add-on without an ID");
-      method = "post";
+      httpMethod = this.post;
       formData.version = version;
       if (channel) {
         this.logger.warn(
@@ -108,45 +157,49 @@ export class Client {
       }
     }
 
-    const doRequest = this[method].bind(this);
-
-    return doRequest({
+    return httpMethod.bind(this)({
       url: addonUrl, formData,
     }, {
       throwOnBadResponse: false,
-    }).then((responseResult) => {
-      const httpResponse = responseResult[0] || {};
-      const response = responseResult[1] || {};
+    }).then(
+      /**
+       * @param {[Response, object]} requestValue
+       */
+      ([httpResponse, body]) => {
+        const response = body || {};
 
-      const acceptableStatuses = [200, 201, 202];
-      const receivedError = !!response.error;
-      if (acceptableStatuses.indexOf(httpResponse.statusCode) === -1
+        const acceptableStatuses = [200, 201, 202];
+        const receivedError = !!response.error;
+        if (acceptableStatuses.indexOf(httpResponse.statusCode) === -1
           || receivedError) {
-        if (response.error) {
-          this.logger.error(`Server response: ${response.error}`,
-                            `(status: ${httpResponse.statusCode})`);
-          return {success: false};
+          if (response.error) {
+            this.logger.error(`Server response: ${response.error}`,
+              `(status: ${httpResponse.statusCode})`);
+            return {success: false};
+          }
+
+          throw new Error(
+            "Received bad response from the server while requesting " +
+            this.absoluteURL(addonUrl) +
+            "\n\n" + "status: " + httpResponse.statusCode + "\n" +
+            "response: " + formatResponse(response) + "\n" + "headers: " +
+            JSON.stringify(httpResponse.headers || {}) + "\n");
         }
 
-        throw new Error(
-          "Received bad response from the server while requesting " +
-          this.absoluteURL(addonUrl) +
-          "\n\n" + "status: " + httpResponse.statusCode + "\n" +
-          "response: " + formatResponse(response) + "\n" + "headers: " +
-          JSON.stringify(httpResponse.headers || {}) + "\n");
+        return this.waitForSignedAddon(response.url);
       }
-
-      return this.waitForSignedAddon(response.url);
-    });
+    );
   }
 
   /**
    * Poll a status URL, waiting for the queued add-on to be signed.
    *
-   * @param {String} URL to GET for add-on status.
-   * @return {Promise}
+   * @param {string} statusUrl - URL to GET for add-on status
+   * @param {object=} opt - options
+   * @returns {Promise<{ success: boolean, downloadedFiles?: string[], id?: string }>}
    */
   waitForSignedAddon(statusUrl, opt) {
+    /** @type {SigningStatus=} */
     var lastStatusResponse;
 
     opt = {
@@ -159,67 +212,78 @@ export class Client {
 
     return new Promise((resolve, reject) => {
       this._validateProgress.animate();
+      /** @type {NodeJS.Timer} */
       var statusCheckTimeout;
+      /** @type {NodeJS.Timer} */
       var nextStatusCheck;
 
       const checkSignedStatus = () => {
-        return this.get({url: statusUrl}).then((result) => {
-          var data = result[1];
-          lastStatusResponse = data;
+        return this.get({url: statusUrl}).then(
+          /**
+           * @param {[Response, SigningStatus]} promise params
+           */
+          // eslint-disable-next-line no-unused-vars
+          ([httpResponse, body]) => {
+            var data = body;
+            lastStatusResponse = data;
 
-          // TODO: remove this when the API has been fully deployed with this
-          // change: https://github.com/mozilla/olympia/pull/1041
-          var apiReportsAutoSigning = typeof data.automated_signing !==
+            // TODO: remove this when the API has been fully deployed with this
+            // change: https://github.com/mozilla/olympia/pull/1041
+            var apiReportsAutoSigning = typeof data.automated_signing !==
               "undefined";
 
-          var canBeAutoSigned = data.automated_signing;
-          var failedValidation = !data.valid;
-          // The add-on passed validation and all files have been created.
-          // There are many checks for this state because the data will be
-          // updated incrementally by the API server.
-          var signedAndReady = data.valid && data.active && data.reviewed &&
-                               data.files && data.files.length > 0;
-          // The add-on is valid but requires a manual review before it can
-          // be signed.
-          var requiresManualReview = data.valid && apiReportsAutoSigning &&
-                                     !canBeAutoSigned;
+            var canBeAutoSigned = data.automated_signing;
+            var failedValidation = !data.valid;
+            // The add-on passed validation and all files have been created.
+            // There are many checks for this state because the data will be
+            // updated incrementally by the API server.
+            var signedAndReady = data.valid && data.active && data.reviewed &&
+              data.files && data.files.length > 0;
+            // The add-on is valid but requires a manual review before it can
+            // be signed.
+            var requiresManualReview = data.valid && apiReportsAutoSigning &&
+              !canBeAutoSigned;
 
-          if (data.processed &&
-                (failedValidation || signedAndReady || requiresManualReview)) {
+            if (data.processed &&
+              (failedValidation || signedAndReady || requiresManualReview)) {
 
-            this._validateProgress.finish();
-            opt.clearTimeout(statusCheckTimeout);
-            this.logger.log("Validation results:", data.validation_url);
+              this._validateProgress.finish();
+              opt.clearTimeout(statusCheckTimeout);
+              this.logger.log("Validation results:", data.validation_url);
 
-            if (requiresManualReview) {
-              this.logger.log(
-                "Your add-on has been submitted for review. It passed " +
-                "validation but could not be automatically signed " +
-                "because this is a listed add-on.");
-              return resolve({success: false});
-            } else if (signedAndReady) {
-              // TODO: show some validation warnings if there are any.
-              // We should show things like "missing update URL in install.rdf"
-              return resolve(
-                this.downloadSignedFiles(data.files)
-                .then((result) => {
-                  return {
-                    id: data.guid,
-                    ...result,
-                  };
-                }));
+              if (requiresManualReview) {
+                this.logger.log(
+                  "Your add-on has been submitted for review. It passed " +
+                  "validation but could not be automatically signed " +
+                  "because this is a listed add-on.");
+                return resolve({success: false});
+              } else if (signedAndReady) {
+                // TODO: show some validation warnings if there are any.
+                // We should show things like "missing update URL in install.rdf"
+                return this.downloadSignedFiles(data.files)
+                  .then(
+                    /**
+                     * @param {{ success: boolean, downloadedFiles: string[] }} result
+                     */
+                    (result) => {
+                      resolve({
+                        id: data.guid,
+                        ...result,
+                      });
+                    });
+              } else {
+                this.logger.log(
+                  "Your add-on failed validation and could not be signed");
+                return resolve({success: false});
+              }
+
             } else {
-              this.logger.log(
-                "Your add-on failed validation and could not be signed");
-              return resolve({success: false});
-            }
-
-          } else {
-            // The add-on has not been fully processed yet.
-            nextStatusCheck = opt.setStatusCheckTimeout(
+              // The add-on has not been fully processed yet.
+              nextStatusCheck = opt.setStatusCheckTimeout(
                 checkSignedStatus, this.signedStatusCheckInterval);
+            }
           }
-        });
+        );
       };
 
       checkSignedStatus().catch(reject);
@@ -239,10 +303,13 @@ export class Client {
   /**
    * Download the signed files.
    *
-   * @param {Array} Array of file objects returned from the API.
-   *                Each object needs to have these parameters:
-   *                  - `download_url` - the URL to the file
-   * @return {Promise}
+   * @param {File[]} signedFiles - Array of file objects returned from the API.
+   * @param {{
+   *   createWriteStream?: typeof defaultFs.createWriteStream,
+   *   request?: typeof defaultRequest,
+   *   stdout?: typeof process.stdout
+   * }} options
+   * @returns {Promise<{ success: boolean, downloadedFiles: string[] }>}
    */
   downloadSignedFiles(signedFiles,
                       {createWriteStream=defaultFs.createWriteStream,
@@ -251,7 +318,9 @@ export class Client {
     if (!request) {
       request = this._request;
     }
+    /** @type {Promise<string>[]} */
     var allDownloads = [];
+    /** @type {null | number} */
     var dataExpected = null;
     var dataReceived = 0;
 
@@ -273,34 +342,56 @@ export class Client {
           "Downloading signed files: " + progress);
     }
 
+    /**
+     * @param {string} fileUrl
+     * @returns {Promise<string>}
+     */
     const download = (fileUrl) => {
       return new Promise((resolve, reject) => {
         // The API will give us a signed file named in a sane way.
         var fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
         var out = createWriteStream(fileName);
 
-        request(
+        request && request(
           this.configureRequest({
             method: "GET",
             url: fileUrl,
             followRedirect: true,
           }))
           .on("error", reject)
-          .on("response", (response) => {
-            if (response.statusCode < 200 || response.statusCode >= 300) {
-              throw new Error(
-                `Got a ${response.statusCode} response ` +
-                `when downloading ${fileUrl}`);
+          .on(
+            "response",
+            /**
+             * @param {Response} response
+             * @returns {void}
+             */
+            (response) => {
+              if (response.statusCode < 200 || response.statusCode >= 300) {
+                throw new Error(
+                  `Got a ${response.statusCode} response ` +
+                  `when downloading ${fileUrl}`);
+              }
+              const contentLength = response.headers["content-length"];
+              if (contentLength) {
+                if (dataExpected !== null) {
+                  dataExpected += parseInt(contentLength);
+                } else {
+                  dataExpected = parseInt(contentLength);
+                }
+              }
             }
-            const contentLength = response.headers["content-length"];
-            if (contentLength) {
-              dataExpected += parseInt(contentLength);
+          )
+          .on(
+            "data",
+            /**
+             * @param {string} chunk
+             * @returns {void}
+             */
+            (chunk) => {
+              dataReceived += chunk.length;
+              showProgress();
             }
-          })
-          .on("data", function(chunk) {
-            dataReceived += chunk.length;
-            showProgress();
-          })
+          )
           .pipe(out)
           .on("error", reject);
 
@@ -335,78 +426,85 @@ export class Client {
           "manifest and make sure it targets Firefox as an application."));
       }
 
-    }).then((downloadedFiles) => {
-      this.logger.log("Downloaded:");
-      downloadedFiles.forEach((fileName) => {
-        this.logger.log("    " + fileName.replace(process.cwd(), "."));
-      });
-      return {
-        success: true,
-        downloadedFiles: downloadedFiles,
-      };
-    });
+    }).then(
+      /**
+       * @param {string[]} downloadedFiles
+       * @returns {{ success: boolean, downloadedFiles: string[] }}
+       */
+      (downloadedFiles) => {
+        this.logger.log("Downloaded:");
+        downloadedFiles.forEach((fileName) => {
+          this.logger.log("    " + fileName.replace(process.cwd(), "."));
+        });
+        return {
+          success: true,
+          downloadedFiles: downloadedFiles,
+        };
+      }
+    );
   }
+
 
   /**
    * Make a GET request.
    *
-   * @param {Object} conf, as accepted by the `request` module.
-   * @param {Object} options, as accepted by `this.request()`.
-   * @return {Promise}
+   * @param {RequestConfig} requestConf
+   * @param {RequestMethodOptions=} options
+   * @returns {RequestMethodReturnValue}
    */
-  get() {
-    return this.request("get", ...arguments);
+  get(requestConf, options) {
+    return this.request("get", requestConf, options);
   }
 
   /**
    * Make a POST request.
    *
-   * @param {Object} conf, as accepted by the `request` module.
-   * @param {Object} options, as accepted by `this.request()`.
-   * @return {Promise}
+   * @param {RequestConfig} requestConf
+   * @param {RequestMethodOptions=} options
+   * @returns {RequestMethodReturnValue}
    */
-  post() {
-    return this.request("post", ...arguments);
+  post(requestConf, options) {
+    return this.request("post", requestConf, options);
   }
 
   /**
    * Make a PUT request.
    *
-   * @param {Object} conf, as accepted by the `request` module.
-   * @param {Object} options, as accepted by `this.request()`.
-   * @return {Promise}
+   * @param {RequestConfig} requestConf
+   * @param {RequestMethodOptions=} options
+   * @returns {RequestMethodReturnValue}
    */
-  put() {
-    return this.request("put", ...arguments);
+  put(requestConf, options) {
+    return this.request("put", requestConf, options);
   }
 
   /**
    * Make a PATCH request.
    *
-   * @param {Object} conf, as accepted by the `request` module.
-   * @param {Object} options, as accepted by `this.request()`.
-   * @return {Promise}
+   * @param {RequestConfig} requestConf
+   * @param {RequestMethodOptions=} options
+   * @returns {RequestMethodReturnValue}
    */
-  patch() {
-    return this.request("patch", ...arguments);
+  patch(requestConf, options) {
+    return this.request("patch", requestConf, options);
   }
 
   /**
    * Make a DELETE request.
    *
-   * @param {Object} conf, as accepted by the `request` module.
-   * @param {Object} options, as accepted by `this.request()`.
-   * @return {Promise}
+   * @param {RequestConfig} requestConf
+   * @param {RequestMethodOptions=} options
+   * @returns {RequestMethodReturnValue}
    */
-  delete() {
-    return this.request("delete", ...arguments);
+  delete(requestConf, options) {
+    return this.request("delete", requestConf, options);
   }
 
   /**
    * Returns a URL that is guaranteed to be absolute.
    *
-   * @param {String} a relative or already absolute URL
-   * @return {String} an absolute URL, prefixed by the API prefix if necessary.
+   * @param {string} url - a relative or already absolute URL
+   * @returns {string} an absolute URL, prefixed by the API prefix if necessary.
    */
   absoluteURL(url) {
     if (!url.match(/^http/i)) {
@@ -418,16 +516,16 @@ export class Client {
   /**
    * Configures a request with defaults such as authentication headers.
    *
-   * @param {Object} requestConf as accepted by the `request` module.
-   * @return {Object} new requestConf object suitable
-   *                  for `request(conf)`, `request.get(conf)`, etc.
+   * @param {RequestConfig} requestConf - as accepted by the `request` module
+   * @param {{ jwt?: typeof defaultJwt}} options
+   * @returns {RequestConfig}
    */
   configureRequest(requestConf, {jwt=defaultJwt}={}) {
     requestConf = {...this.requestConfig, ...requestConf};
     if (!requestConf.url) {
       throw new Error("request URL was not specified");
     }
-    requestConf.url = this.absoluteURL(requestConf.url);
+    requestConf.url = this.absoluteURL(String(requestConf.url));
     if (this.proxyServer) {
       requestConf.proxy = this.proxyServer;
     }
@@ -455,25 +553,24 @@ export class Client {
    *
    * This includes the necessary authorization header.
    *
-   * @param {String} method - HTTP method name.
-   * @param {Object} requestConf as accepted by the `request` module.
-   * @param {Object} options.
-   *  - `throwOnBadResponse` - if true, an error will be thrown when not
-   *                           response status is not 2xx
+   * The returned promise will be resolved with an array of arguments that
+   * match the arguments sent to the callback as specified in the `request`
+   * module.
    *
-   * The returned promise will be resolved with an array of arguments
-   * that match the arguments sent to the callback as specified in the
-   * `request` module.
-   *
-   * @return {Promise}
+   * @param {string} method - HTTP method name.
+   * @param {RequestConfig} requestConf - options accepted by the `request` module
+   * @param {RequestMethodOptions} options
+   * @returns {RequestMethodReturnValue}
    */
   request(method, requestConf, {throwOnBadResponse=true} = {}) {
     method = method.toLowerCase();
+
     return new Promise((resolve, reject) => {
       requestConf = this.configureRequest(requestConf);
       this.debug(`[API] ${method.toUpperCase()} request:\n`, requestConf);
 
       // Get the caller, like request.get(), request.put() ...
+      // @ts-ignore
       var requestMethod = this._request[method].bind(this._request);
       // Wrap the request callback in a promise. Here is an example without
       // promises:
@@ -482,7 +579,15 @@ export class Client {
       //   // promise gets resolved here
       // })
       //
-      requestMethod(requestConf, (error, httpResponse, body) => {
+      requestMethod(
+        /** @type RequestConfig */
+        requestConf,
+        /**
+         * @param {Error} error
+         * @param {Response} httpResponse
+         * @param {string} body
+         */
+        (error, httpResponse, body) => {
         if (error) {
           reject(error);
           return;
@@ -490,34 +595,39 @@ export class Client {
 
         resolve([httpResponse, body]);
       });
-    }).then(([httpResponse, body]) => {
-      if (throwOnBadResponse) {
-        if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
-          throw new Error(
-            "Received bad response from " +
-            this.absoluteURL(requestConf.url) + "; " +
-            "status: " + httpResponse.statusCode + "; " +
-            "response: " + formatResponse(body));
+    }).then(
+      /**
+       * @param {[Response, string]} promise params
+       */
+      ([httpResponse, body]) => {
+        if (throwOnBadResponse) {
+          if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
+            throw new Error(
+              "Received bad response from " +
+              this.absoluteURL(String(requestConf.url)) + "; " +
+              "status: " + httpResponse.statusCode + "; " +
+              "response: " + formatResponse(body));
+          }
         }
-      }
 
-      if (
-        httpResponse.headers &&
+        if (
+          httpResponse.headers &&
           httpResponse.headers["content-type"] === "application/json" &&
           typeof body === "string"
-      ) {
-        try {
-          body = JSON.parse(body);
-        } catch (e) {
-          this.logger.log("Failed to parse JSON response from server:", e);
+        ) {
+          try {
+            body = JSON.parse(body);
+          } catch (e) {
+            this.logger.log("Failed to parse JSON response from server:", e);
+          }
         }
-      }
-      this.debug(`[API] ${method.toUpperCase()} response:\n`,
-                 `Status: ${httpResponse.statusCode}\n`,
-                 {headers: httpResponse.headers, response: body});
+        this.debug(`[API] ${method.toUpperCase()} response:\n`,
+          `Status: ${httpResponse.statusCode}\n`,
+          {headers: httpResponse.headers, response: body});
 
-      return [httpResponse, body];
-    });
+        return [httpResponse, body];
+      }
+    );
   }
 
   /**
@@ -528,6 +638,9 @@ export class Client {
       return;
     }
 
+    /**
+     * @param {object} obj
+     */
     function redact(obj) {
       if (typeof obj !== "object" || !obj) {
         return obj;
@@ -565,11 +678,19 @@ export class Client {
  * randomly getting filled in.
  */
 export class PseudoProgress {
+  /**
+   * @typedef {object} PseudoProgressParams
+   * @property {string} [preamble]
+   * @property {typeof defaultSetInterval} [setInterval]
+   * @property {typeof defaultClearInterval} [clearInterval]
+   * @property {typeof process.stdout} [stdout]
+   */
   constructor({preamble="",
                setInterval=defaultSetInterval,
                clearInterval=defaultClearInterval,
                stdout=process.stdout} = {}) {
 
+    /** @type {string[]} */
     this.bucket = [];
     this.interval = null;
     this.motionCounter = 1;
@@ -583,9 +704,10 @@ export class PseudoProgress {
 
     var shellWidth = 80;
     if (this.stdout.isTTY) {
-      shellWidth = this.stdout.columns;
+      shellWidth = Number(this.stdout.columns);
     }
 
+    /** @type {number[]} */
     this.emptyBucketPointers = [];
     var bucketSize = shellWidth - this.preamble.length - this.addendum.length;
     for (var i = 0; i < bucketSize; i++) {
@@ -594,6 +716,12 @@ export class PseudoProgress {
     }
   }
 
+  /**
+   * @typedef {Object} AnimateConfig
+   * @property {number} speed
+   *
+   * @param {AnimateConfig=} conf
+   */
   animate(conf) {
     conf = {
       speed: 100,
@@ -610,7 +738,10 @@ export class PseudoProgress {
   }
 
   finish() {
-    this.clearInterval(this.interval);
+    if (this.interval) {
+      this.clearInterval(this.interval);
+    }
+
     this.fillBucket();
     // The bucket has already filled to the terminal width at this point
     // but for copy/paste purposes, add a new line:
@@ -627,6 +758,7 @@ export class PseudoProgress {
     this.showBucket();
 
     var isFull = true;
+    /** @type {number[]} */
     var newPointers = [];
     this.emptyBucketPointers.forEach((pointer) => {
       if (this.bucket[pointer] === " ") {
@@ -665,10 +797,13 @@ export class PseudoProgress {
 
 /**
  * Returns a nicely formatted HTTP response.
- *
  * This makes the response suitable for logging.
- * */
-export function formatResponse(response, options) {
+ *
+ * @param {string|object} response - either the response's body or an object representing a JSON API response.
+ * @param {object=} options
+ * @return {string}
+ */
+export function formatResponse(response, options = {}) {
   options = {
     maxLength: 500,
     ...options,
@@ -692,9 +827,15 @@ export function formatResponse(response, options) {
 
 /**
  * Returns the basename of a URL, suitable for saving to disk.
- * */
+ *
+ * @param {string} absUrl
+ * @return {string}
+ */
 export function getUrlBasename(absUrl) {
-  var urlPath = path.basename(url.parse(absUrl).path);
-  var parts = urlPath.split("?");
+  // TODO: `url.parse()` might return `undefined` so we need to check that first.
+  // @ts-ignore
+  const urlPath = path.basename(url.parse(absUrl).path);
+  const parts = urlPath.split("?");
+
   return parts[0];
 }

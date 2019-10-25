@@ -32,6 +32,9 @@
     "@babel/preset-env": "7.6.2",
     "@commitlint/cli": "8.2.0",
     "@commitlint/config-conventional": "8.2.0",
+    "@types/jsonwebtoken": "8.3.5",
+    "@types/mz": "0.0.32",
+    "@types/request": "2.48.3",
     "babel-eslint": "10.0.3",
     "babel-loader": "8.0.6",
     "chai": "4.2.0",
@@ -48,10 +51,10 @@
     "load-grunt-tasks": "5.1.0",
     "mocha": "6.2.0",
     "sinon": "7.5.0",
-    "webpack": "4.41.0",
-    "webpack-dev-server": "3.8.1",
     "type-coverage": "2.3.0",
-    "typescript": "3.6.4"
+    "typescript": "3.6.4",
+    "webpack": "4.41.0",
+    "webpack-dev-server": "3.8.1"
   },
   "repository": {
     "type": "git",
