@@ -680,10 +680,10 @@ export class Client {
 export class PseudoProgress {
   /**
    * @typedef {object} PseudoProgressParams
-   * @property {string} [preamble]
-   * @property {typeof defaultSetInterval} [setInterval]
-   * @property {typeof defaultClearInterval} [clearInterval]
-   * @property {typeof process.stdout} [stdout]
+   * @property {string=} preamble
+   * @property {typeof defaultSetInterval=} setInterval
+   * @property {typeof defaultClearInterval=} clearInterval
+   * @property {typeof process.stdout=} stdout
    */
   constructor({preamble="",
                setInterval=defaultSetInterval,

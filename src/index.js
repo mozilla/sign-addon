@@ -19,9 +19,9 @@ import {Client as DefaultAMOClient} from "./amo-client";
  * @property {string} channel
  * @property {number} timeout
  * @property {string} downloadDir
- * @property {string} [apiProxy]
- * @property {RequestConfig} [apiRequestConfig]
- * @property {typeof DefaultAMOClient} [AMOClient]
+ * @property {string=} apiProxy
+ * @property {RequestConfig=} apiRequestConfig
+ * @property {typeof DefaultAMOClient=} AMOClient
  *
  * @param {SignAddonParams} params
  */
@@ -122,7 +122,11 @@ export default function signAddon(
 
 /**
  * @param {object} options
- * @param {{systemProcess: typeof process, throwError: false, logger: typeof console}} [extras]
+ * @param {{
+ *   systemProcess?: typeof process,
+ *   throwError?: false,
+ *   logger?: typeof console
+ * }} extras
  * @return {Promise<void>}
  */
 export function signAddonAndExit(
