@@ -1,15 +1,14 @@
-import {beforeEach, describe, it} from "mocha";
-import path from "path";
-import {expect} from "chai";
-import sinon from "sinon";
+import { beforeEach, describe, it } from 'mocha';
+import path from 'path';
+import { expect } from 'chai';
+import sinon from 'sinon';
 
-import {signAddonAndExit} from "../src";
+import { signAddonAndExit } from '../src';
 
 const testDir = path.resolve(__dirname);
-const fixturePath = path.join(testDir, "fixtures");
+const fixturePath = path.join(testDir, 'fixtures');
 
-
-describe("sign", function() {
+describe('sign', function() {
   var mockProcessExit;
   var mockProcess;
   var signingCall;
@@ -27,7 +26,7 @@ describe("sign", function() {
   function makeAMOClientStub(options) {
     options = {
       errorToThrow: null,
-      result: {success: true},
+      result: { success: true },
       ...options,
     };
 
@@ -37,12 +36,15 @@ describe("sign", function() {
       this.debug = function() {};
     }
 
-    signingCall = sinon.spy(() => new Promise((resolve) => {
-      if (options.errorToThrow) {
-        throw options.errorToThrow;
-      }
-      resolve(options.result);
-    }));
+    signingCall = sinon.spy(
+      () =>
+        new Promise((resolve) => {
+          if (options.errorToThrow) {
+            throw options.errorToThrow;
+          }
+          resolve(options.result);
+        }),
+    );
     FakeAMOClient.prototype.sign = signingCall;
 
     return FakeAMOClient;
@@ -57,11 +59,11 @@ describe("sign", function() {
     };
 
     var cmdOptions = {
-      apiKey: "some-key",
-      apiSecret: "some-secret",
-      id: "some-addon@somewhere",
-      xpiPath: path.join(fixturePath, "simple-addon.xpi"),
-      version: "0.0.1",
+      apiKey: 'some-key',
+      apiSecret: 'some-secret',
+      id: 'some-addon@somewhere',
+      xpiPath: path.join(fixturePath, 'simple-addon.xpi'),
+      version: '0.0.1',
       verbose: false,
       AMOClient: options.StubAMOClient,
       ...options.cmdOptions,
@@ -75,121 +77,126 @@ describe("sign", function() {
     return signAddonAndExit(cmdOptions, cmdConfig);
   }
 
-  it("should exit 0 on signing success", () => {
-    return runSignCmd({throwError: false}).then(function() {
+  it('should exit 0 on signing success', () => {
+    return runSignCmd({ throwError: false }).then(function() {
       expect(signingCall.called).to.be.equal(true);
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(0);
     });
   });
 
-  it("passes id/version to the signer", () => {
+  it('passes id/version to the signer', () => {
     return runSignCmd({
       cmdOptions: {
-        id: "@simple-addon",
-        version: "1.0.0",
+        id: '@simple-addon',
+        version: '1.0.0',
       },
     }).then(function() {
       expect(signingCall.called).to.be.equal(true);
-      expect(signingCall.firstCall.args[0].version).to.be.equal("1.0.0");
-      expect(signingCall.firstCall.args[0].guid)
-        .to.be.equal("@simple-addon");
+      expect(signingCall.firstCall.args[0].version).to.be.equal('1.0.0');
+      expect(signingCall.firstCall.args[0].guid).to.be.equal('@simple-addon');
     });
   });
 
-  it("passes release channel to the signer", () => {
-    const channel = "listed";
+  it('passes release channel to the signer', () => {
+    const channel = 'listed';
     return runSignCmd({
-      cmdOptions: {channel},
+      cmdOptions: { channel },
     }).then(function() {
       expect(signingCall.called).to.be.equal(true);
       expect(signingCall.firstCall.args[0].channel).to.be.equal(channel);
     });
   });
 
-  it("passes JWT expiration to the signing client", () => {
+  it('passes JWT expiration to the signing client', () => {
     const expiresIn = 60 * 15; // 15 minutes
     return runSignCmd({
       cmdOptions: {
         apiJwtExpiresIn: expiresIn,
       },
     }).then(() => {
-      expect(fakeClientContructor.firstCall.args[0].apiJwtExpiresIn)
-        .to.be.equal(expiresIn);
+      expect(
+        fakeClientContructor.firstCall.args[0].apiJwtExpiresIn,
+      ).to.be.equal(expiresIn);
     });
   });
 
-  it("throws an error for XPI file errors", () => {
+  it('throws an error for XPI file errors', () => {
     return runSignCmd({
       throwError: false,
       cmdOptions: {
-        xpiPath: "/not/a/real/path.xpi",
+        xpiPath: '/not/a/real/path.xpi',
       },
     }).then(function() {
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
     });
   });
 
-  it("can turn on debug logging", () => {
+  it('can turn on debug logging', () => {
     return runSignCmd({
       cmdOptions: {
         verbose: true,
       },
     }).then(function() {
-      expect(fakeClientContructor.firstCall.args[0].debugLogging)
-        .to.be.equal(true);
+      expect(fakeClientContructor.firstCall.args[0].debugLogging).to.be.equal(
+        true,
+      );
     });
   });
 
-  it("can configure an API proxy", () => {
-    const apiProxy = "http://yourproxy:6000";
+  it('can configure an API proxy', () => {
+    const apiProxy = 'http://yourproxy:6000';
     return runSignCmd({
-      cmdOptions: {apiProxy},
+      cmdOptions: { apiProxy },
     }).then(function() {
-      expect(fakeClientContructor.firstCall.args[0].proxyServer)
-        .to.be.equal(apiProxy);
+      expect(fakeClientContructor.firstCall.args[0].proxyServer).to.be.equal(
+        apiProxy,
+      );
     });
   });
 
-  it("can configure an API request", () => {
-    const apiRequestConfig = {tunnel: true};
+  it('can configure an API request', () => {
+    const apiRequestConfig = { tunnel: true };
     return runSignCmd({
-      cmdOptions: {apiRequestConfig},
+      cmdOptions: { apiRequestConfig },
     }).then(function() {
-      expect(fakeClientContructor.firstCall.args[0].requestConfig)
-        .to.be.deep.equal(apiRequestConfig);
+      expect(
+        fakeClientContructor.firstCall.args[0].requestConfig,
+      ).to.be.deep.equal(apiRequestConfig);
     });
   });
 
-  it("can configure polling timeouts", () => {
+  it('can configure polling timeouts', () => {
     return runSignCmd({
       cmdOptions: {
         timeout: 5000,
       },
     }).then(function() {
       expect(fakeClientContructor.called).to.be.equal(true);
-      expect(fakeClientContructor.firstCall.args[0].signedStatusCheckTimeout)
-        .to.be.equal(5000);
+      expect(
+        fakeClientContructor.firstCall.args[0].signedStatusCheckTimeout,
+      ).to.be.equal(5000);
     });
   });
 
-  it("can configure a download destination", () => {
+  it('can configure a download destination', () => {
     return runSignCmd({
       cmdOptions: {
-        downloadDir: "/some/fake/download-destination",
+        downloadDir: '/some/fake/download-destination',
       },
     }).then(function() {
       expect(fakeClientContructor.called).to.be.equal(true);
-      expect(fakeClientContructor.firstCall.args[0].downloadDir)
-        .to.be.equal("/some/fake/download-destination");
+      expect(fakeClientContructor.firstCall.args[0].downloadDir).to.be.equal(
+        '/some/fake/download-destination',
+      );
     });
   });
 
-  it("passes custom XPI to the signer", () => {
-    let xpiPath = path.join(fixturePath, "simple-addon.xpi");
+  it('passes custom XPI to the signer', () => {
+    let xpiPath = path.join(fixturePath, 'simple-addon.xpi');
     return runSignCmd({
       cmdOptions: {
-        id: "some-id",
-        version: "0.0.1",
+        id: 'some-id',
+        version: '0.0.1',
         xpiPath: xpiPath,
       },
     }).then(function() {
@@ -198,21 +205,21 @@ describe("sign", function() {
     });
   });
 
-  it("should exit 1 on signing failure", () => {
+  it('should exit 1 on signing failure', () => {
     return runSignCmd({
       throwError: false,
       StubAMOClient: makeAMOClientStub({
-        result: {success: false},
+        result: { success: false },
       }),
     }).then(function() {
       expect(mockProcessExit.firstCall.args[0]).to.be.equal(1);
     });
   });
 
-  it("should exit 1 on exception", () => {
+  it('should exit 1 on exception', () => {
     return runSignCmd({
       StubAMOClient: makeAMOClientStub({
-        errorToThrow: new Error("some signing error"),
+        errorToThrow: new Error('some signing error'),
       }),
       throwError: false,
     }).then(function() {
@@ -220,11 +227,11 @@ describe("sign", function() {
     });
   });
 
-  it("should allow an empty id", () => {
+  it('should allow an empty id', () => {
     return runSignCmd({
       cmdOptions: {
         id: null,
-        version: "0.0.1",
+        version: '0.0.1',
       },
     }).then(() => {
       expect(signingCall.called).to.be.equal(true);
@@ -232,53 +239,60 @@ describe("sign", function() {
     });
   });
 
-  it("should throw error when version is empty", () => {
+  it('should throw error when version is empty', () => {
     return runSignCmd({
       cmdOptions: {
-        id: "some-addon@somewhere",
+        id: 'some-addon@somewhere',
         version: null,
       },
-    }).then(() => {
-      throw new Error("unexpected success");
-    }).catch((error) => {
-      expect(error.message).to.match(/argument was empty: version/);
-    });
+    })
+      .then(() => {
+        throw new Error('unexpected success');
+      })
+      .catch((error) => {
+        expect(error.message).to.match(/argument was empty: version/);
+      });
   });
 
-  it("should throw error when xpiPath is empty", () => {
+  it('should throw error when xpiPath is empty', () => {
     return runSignCmd({
       cmdOptions: {
         xpiPath: null,
       },
-    }).then(() => {
-      throw new Error("unexpected success");
-    }).catch((error) => {
-      expect(error.message).to.match(/argument was empty: xpiPath/);
-    });
+    })
+      .then(() => {
+        throw new Error('unexpected success');
+      })
+      .catch((error) => {
+        expect(error.message).to.match(/argument was empty: xpiPath/);
+      });
   });
 
-  it("should throw error when apiKey is empty", () => {
+  it('should throw error when apiKey is empty', () => {
     return runSignCmd({
       cmdOptions: {
         apiKey: null,
       },
-    }).then(() => {
-      throw new Error("unexpected success");
-    }).catch((error) => {
-      expect(error.message).to.match(/argument was empty: apiKey/);
-    });
+    })
+      .then(() => {
+        throw new Error('unexpected success');
+      })
+      .catch((error) => {
+        expect(error.message).to.match(/argument was empty: apiKey/);
+      });
   });
 
-  it("should throw error when apiSecret is empty", () => {
+  it('should throw error when apiSecret is empty', () => {
     return runSignCmd({
       cmdOptions: {
         apiSecret: null,
       },
-    }).then(() => {
-      throw new Error("unexpected success");
-    }).catch((error) => {
-      expect(error.message).to.match(/argument was empty: apiSecret/);
-    });
+    })
+      .then(() => {
+        throw new Error('unexpected success');
+      })
+      .catch((error) => {
+        expect(error.message).to.match(/argument was empty: apiSecret/);
+      });
   });
-
 });

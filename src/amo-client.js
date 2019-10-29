@@ -1,9 +1,9 @@
-import deepcopy from "deepcopy";
-import {default as defaultFs} from "fs";
-import url from "url";
-import path from "path";
-import defaultJwt from "jsonwebtoken";
-import {default as defaultRequest} from "request";
+import deepcopy from 'deepcopy';
+import { default as defaultFs } from 'fs';
+import url from 'url';
+import path from 'path';
+import defaultJwt from 'jsonwebtoken';
+import { default as defaultRequest } from 'request';
 
 const defaultSetInterval = setInterval;
 const defaultClearInterval = clearInterval;
@@ -84,26 +84,28 @@ export class Client {
   /**
    * @param {ClientParams} params
    */
-  constructor({apiKey,
-               apiSecret,
-               apiUrlPrefix,
-               // TODO: put this back to something sane after we
-               // address the file upload issue on AMO:
-               // https://github.com/mozilla/addons-server/issues/3688
-               apiJwtExpiresIn=60 * 5,  // 5 minutes
-               debugLogging=false,
-               signedStatusCheckInterval=1000,
-               signedStatusCheckTimeout=120000,  // 2 minutes.
-               logger=console,
-               downloadDir=process.cwd(),
-               fs=defaultFs,
-               request=defaultRequest,
-               proxyServer,
-               requestConfig,
-               validateProgress}) {
+  constructor({
+    apiKey,
+    apiSecret,
+    apiUrlPrefix,
+    // TODO: put this back to something sane after we
+    // address the file upload issue on AMO:
+    // https://github.com/mozilla/addons-server/issues/3688
+    apiJwtExpiresIn = 60 * 5, // 5 minutes
+    debugLogging = false,
+    signedStatusCheckInterval = 1000,
+    signedStatusCheckTimeout = 120000, // 2 minutes.
+    logger = console,
+    downloadDir = process.cwd(),
+    fs = defaultFs,
+    request = defaultRequest,
+    proxyServer,
+    requestConfig,
+    validateProgress,
+  }) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
-    this.apiUrlPrefix = apiUrlPrefix;  // default set in CLI options.
+    this.apiUrlPrefix = apiUrlPrefix; // default set in CLI options.
     this.apiJwtExpiresIn = apiJwtExpiresIn;
     this.signedStatusCheckInterval = signedStatusCheckInterval;
     this.signedStatusCheckTimeout = signedStatusCheckTimeout;
@@ -114,9 +116,11 @@ export class Client {
     this.requestConfig = requestConfig || {};
 
     // Set up external dependencies, allowing for overrides.
-    this._validateProgress = validateProgress || new PseudoProgress({
-      preamble: "Validating add-on",
-    });
+    this._validateProgress =
+      validateProgress ||
+      new PseudoProgress({
+        preamble: 'Validating add-on',
+      });
     this._fs = fs;
     this._request = request;
   }
@@ -133,67 +137,87 @@ export class Client {
    * @param {SignParams} signParams
    * @returns {Promise<SignResult>}
    */
-  sign({guid, version, channel, xpiPath}) {
-
+  sign({ guid, version, channel, xpiPath }) {
     /** @type {object} */
     const formData = {
       upload: this._fs.createReadStream(xpiPath),
     };
-    let addonUrl = "/addons/";
+    let addonUrl = '/addons/';
     let httpMethod = this.put;
     if (guid) {
       // PUT to a specific URL for this add-on + version.
-      addonUrl += encodeURIComponent(guid) +
-        "/versions/" + encodeURIComponent(version) + "/";
+      addonUrl +=
+        encodeURIComponent(guid) +
+        '/versions/' +
+        encodeURIComponent(version) +
+        '/';
       if (channel) {
         formData.channel = channel;
       }
     } else {
       // POST to a generic URL to create a new add-on.
-      this.debug("Signing add-on without an ID");
+      this.debug('Signing add-on without an ID');
       httpMethod = this.post;
       formData.version = version;
       if (channel) {
         this.logger.warn(
-          "Specifying a channel for a new add-on is unsupported. " +
-          "New add-ons are always in the unlisted channel."
+          'Specifying a channel for a new add-on is unsupported. ' +
+            'New add-ons are always in the unlisted channel.',
         );
       }
     }
 
-    return httpMethod.bind(this)({
-      url: addonUrl, formData,
-    }, {
-      throwOnBadResponse: false,
-    }).then(
-      /**
-       * @param {[Response, object]} requestValue
-       * @returns {Promise<SignResult>} result
-      */
-      ([httpResponse, body]) => {
-        const response = body || {};
+    return httpMethod
+      .bind(this)(
+        {
+          url: addonUrl,
+          formData,
+        },
+        {
+          throwOnBadResponse: false,
+        },
+      )
+      .then(
+        /**
+         * @param {[Response, object]} requestValue
+         * @returns {Promise<SignResult>} result
+         */
+        ([httpResponse, body]) => {
+          const response = body || {};
 
-        const acceptableStatuses = [200, 201, 202];
-        const receivedError = !!response.error;
-        if (acceptableStatuses.indexOf(httpResponse.statusCode) === -1
-          || receivedError) {
-          if (response.error) {
-            this.logger.error(`Server response: ${response.error}`,
-              `(status: ${httpResponse.statusCode})`);
-            return Promise.resolve({success: false});
+          const acceptableStatuses = [200, 201, 202];
+          const receivedError = !!response.error;
+          if (
+            acceptableStatuses.indexOf(httpResponse.statusCode) === -1 ||
+            receivedError
+          ) {
+            if (response.error) {
+              this.logger.error(
+                `Server response: ${response.error}`,
+                `(status: ${httpResponse.statusCode})`,
+              );
+              return Promise.resolve({ success: false });
+            }
+
+            throw new Error(
+              'Received bad response from the server while requesting ' +
+                this.absoluteURL(addonUrl) +
+                '\n\n' +
+                'status: ' +
+                httpResponse.statusCode +
+                '\n' +
+                'response: ' +
+                formatResponse(response) +
+                '\n' +
+                'headers: ' +
+                JSON.stringify(httpResponse.headers || {}) +
+                '\n',
+            );
           }
 
-          throw new Error(
-            "Received bad response from the server while requesting " +
-            this.absoluteURL(addonUrl) +
-            "\n\n" + "status: " + httpResponse.statusCode + "\n" +
-            "response: " + formatResponse(response) + "\n" + "headers: " +
-            JSON.stringify(httpResponse.headers || {}) + "\n");
-        }
-
-        return this.waitForSignedAddon(response.url);
-      }
-    );
+          return this.waitForSignedAddon(response.url);
+        },
+      );
   }
 
   /**
@@ -223,7 +247,7 @@ export class Client {
       var nextStatusCheck;
 
       const checkSignedStatus = () => {
-        return this.get({url: statusUrl}).then(
+        return this.get({ url: statusUrl }).then(
           /**
            * @param {[Response, SigningStatus]} promise params
            */
@@ -234,60 +258,68 @@ export class Client {
 
             // TODO: remove this when the API has been fully deployed with this
             // change: https://github.com/mozilla/olympia/pull/1041
-            var apiReportsAutoSigning = typeof data.automated_signing !==
-              "undefined";
+            var apiReportsAutoSigning =
+              typeof data.automated_signing !== 'undefined';
 
             var canBeAutoSigned = data.automated_signing;
             var failedValidation = !data.valid;
             // The add-on passed validation and all files have been created.
             // There are many checks for this state because the data will be
             // updated incrementally by the API server.
-            var signedAndReady = data.valid && data.active && data.reviewed &&
-              data.files && data.files.length > 0;
+            var signedAndReady =
+              data.valid &&
+              data.active &&
+              data.reviewed &&
+              data.files &&
+              data.files.length > 0;
             // The add-on is valid but requires a manual review before it can
             // be signed.
-            var requiresManualReview = data.valid && apiReportsAutoSigning &&
-              !canBeAutoSigned;
+            var requiresManualReview =
+              data.valid && apiReportsAutoSigning && !canBeAutoSigned;
 
-            if (data.processed &&
-              (failedValidation || signedAndReady || requiresManualReview)) {
-
+            if (
+              data.processed &&
+              (failedValidation || signedAndReady || requiresManualReview)
+            ) {
               this._validateProgress.finish();
               opt.clearTimeout(statusCheckTimeout);
-              this.logger.log("Validation results:", data.validation_url);
+              this.logger.log('Validation results:', data.validation_url);
 
               if (requiresManualReview) {
                 this.logger.log(
-                  "Your add-on has been submitted for review. It passed " +
-                  "validation but could not be automatically signed " +
-                  "because this is a listed add-on.");
-                return resolve({success: false});
+                  'Your add-on has been submitted for review. It passed ' +
+                    'validation but could not be automatically signed ' +
+                    'because this is a listed add-on.',
+                );
+                return resolve({ success: false });
               } else if (signedAndReady) {
                 // TODO: show some validation warnings if there are any.
                 // We should show things like "missing update URL in install.rdf"
-                return this.downloadSignedFiles(data.files)
-                  .then(
-                    /**
-                     * @param {SignResult} result
-                     */
-                    (result) => {
-                      resolve({
-                        id: data.guid,
-                        ...result,
-                      });
+                return this.downloadSignedFiles(data.files).then(
+                  /**
+                   * @param {SignResult} result
+                   */
+                  (result) => {
+                    resolve({
+                      id: data.guid,
+                      ...result,
                     });
+                  },
+                );
               } else {
                 this.logger.log(
-                  "Your add-on failed validation and could not be signed");
-                return resolve({success: false});
+                  'Your add-on failed validation and could not be signed',
+                );
+                return resolve({ success: false });
               }
-
             } else {
               // The add-on has not been fully processed yet.
               nextStatusCheck = opt.setStatusCheckTimeout(
-                checkSignedStatus, this.signedStatusCheckInterval);
+                checkSignedStatus,
+                this.signedStatusCheckInterval,
+              );
             }
-          }
+          },
         );
       };
 
@@ -296,12 +328,13 @@ export class Client {
       statusCheckTimeout = opt.setAbortTimeout(() => {
         this._validateProgress.finish();
         opt.clearTimeout(nextStatusCheck);
-        reject(new Error(
-            "Validation took too long to complete; last status: " +
-            formatResponse(lastStatusResponse || "[null]")));
-
+        reject(
+          new Error(
+            'Validation took too long to complete; last status: ' +
+              formatResponse(lastStatusResponse || '[null]'),
+          ),
+        );
       }, opt.abortAfter);
-
     });
   }
 
@@ -316,10 +349,14 @@ export class Client {
    * }} options
    * @returns {Promise<SignResult>}
    */
-  downloadSignedFiles(signedFiles,
-                      {createWriteStream=defaultFs.createWriteStream,
-                       request=this._request,
-                       stdout=process.stdout} = {}) {
+  downloadSignedFiles(
+    signedFiles,
+    {
+      createWriteStream = defaultFs.createWriteStream,
+      request = this._request,
+      stdout = process.stdout,
+    } = {},
+  ) {
     /** @type {Promise<string>[]} */
     var allDownloads = [];
     /** @type {null | number} */
@@ -327,20 +364,20 @@ export class Client {
     var dataReceived = 0;
 
     function showProgress() {
-      var progress = "...";
+      var progress = '...';
       if (dataExpected !== null) {
         var amount = ((dataReceived / dataExpected) * 100).toFixed();
         // Pad the percentage amount so that the line length is consistent.
         // This should do something like '  0%', ' 25%', '100%'
-        var padding = "";
+        var padding = '';
         try {
-          padding = Array(4 - amount.length).join(" ");
+          padding = Array(4 - amount.length).join(' ');
         } catch (e) {
           // Ignore Invalid array length and such.
         }
-        progress = padding + amount + "% ";
+        progress = padding + amount + '% ';
       }
-      stdout.write("\r" + "Downloading signed files: " + progress);
+      stdout.write('\r' + 'Downloading signed files: ' + progress);
     }
 
     /**
@@ -355,13 +392,14 @@ export class Client {
 
         request(
           this.configureRequest({
-            method: "GET",
+            method: 'GET',
             url: fileUrl,
             followRedirect: true,
-          }))
-          .on("error", reject)
+          }),
+        )
+          .on('error', reject)
           .on(
-            "response",
+            'response',
             /**
              * @param {Response} response
              * @returns {void}
@@ -370,9 +408,10 @@ export class Client {
               if (response.statusCode < 200 || response.statusCode >= 300) {
                 throw new Error(
                   `Got a ${response.statusCode} response ` +
-                  `when downloading ${fileUrl}`);
+                    `when downloading ${fileUrl}`,
+                );
               }
-              const contentLength = response.headers["content-length"];
+              const contentLength = response.headers['content-length'];
               if (contentLength) {
                 if (dataExpected !== null) {
                   dataExpected += parseInt(contentLength);
@@ -380,10 +419,10 @@ export class Client {
                   dataExpected = parseInt(contentLength);
                 }
               }
-            }
+            },
           )
           .on(
-            "data",
+            'data',
             /**
              * @param {string} chunk
              * @returns {void}
@@ -391,13 +430,13 @@ export class Client {
             (chunk) => {
               dataReceived += chunk.length;
               showProgress();
-            }
+            },
           )
           .pipe(out)
-          .on("error", reject);
+          .on('error', reject);
 
-        out.on("finish", function() {
-          stdout.write("\n");  // end the progress output
+        out.on('finish', function() {
+          stdout.write('\n'); // end the progress output
           resolve(fileName);
         });
       });
@@ -409,7 +448,7 @@ export class Client {
         if (file.signed) {
           allDownloads.push(download(file.download_url));
         } else {
-          this.debug("This file was not signed:", file);
+          this.debug('This file was not signed:', file);
           foundUnsignedFiles = true;
         }
       });
@@ -417,34 +456,37 @@ export class Client {
       if (allDownloads.length) {
         if (foundUnsignedFiles) {
           this.logger.log(
-            "Some files were not signed. Re-run with --verbose for details.");
+            'Some files were not signed. Re-run with --verbose for details.',
+          );
         }
         showProgress();
         resolve(Promise.all(allDownloads));
       } else {
-        reject(new Error(
-          "The XPI was processed but no signed files were found. Check your " +
-          "manifest and make sure it targets Firefox as an application."));
+        reject(
+          new Error(
+            'The XPI was processed but no signed files were found. Check ' +
+              'your manifest and make sure it targets Firefox as an ' +
+              'application.',
+          ),
+        );
       }
-
     }).then(
       /**
        * @param {string[]} downloadedFiles
        * @returns {SignResult}
        */
       (downloadedFiles) => {
-        this.logger.log("Downloaded:");
+        this.logger.log('Downloaded:');
         downloadedFiles.forEach((fileName) => {
-          this.logger.log("    " + fileName.replace(process.cwd(), "."));
+          this.logger.log('    ' + fileName.replace(process.cwd(), '.'));
         });
         return {
           success: true,
           downloadedFiles: downloadedFiles,
         };
-      }
+      },
     );
   }
-
 
   /**
    * Make a GET request.
@@ -454,7 +496,7 @@ export class Client {
    * @returns {RequestMethodReturnValue}
    */
   get(requestConf, options) {
-    return this.request("get", requestConf, options);
+    return this.request('get', requestConf, options);
   }
 
   /**
@@ -465,7 +507,7 @@ export class Client {
    * @returns {RequestMethodReturnValue}
    */
   post(requestConf, options) {
-    return this.request("post", requestConf, options);
+    return this.request('post', requestConf, options);
   }
 
   /**
@@ -476,7 +518,7 @@ export class Client {
    * @returns {RequestMethodReturnValue}
    */
   put(requestConf, options) {
-    return this.request("put", requestConf, options);
+    return this.request('put', requestConf, options);
   }
 
   /**
@@ -487,7 +529,7 @@ export class Client {
    * @returns {RequestMethodReturnValue}
    */
   patch(requestConf, options) {
-    return this.request("patch", requestConf, options);
+    return this.request('patch', requestConf, options);
   }
 
   /**
@@ -498,7 +540,7 @@ export class Client {
    * @returns {RequestMethodReturnValue}
    */
   delete(requestConf, options) {
-    return this.request("delete", requestConf, options);
+    return this.request('delete', requestConf, options);
   }
 
   /**
@@ -521,28 +563,28 @@ export class Client {
    * @param {{ jwt?: typeof defaultJwt}} options
    * @returns {RequestConfig}
    */
-  configureRequest(requestConf, {jwt=defaultJwt}={}) {
-    requestConf = {...this.requestConfig, ...requestConf};
+  configureRequest(requestConf, { jwt = defaultJwt } = {}) {
+    requestConf = { ...this.requestConfig, ...requestConf };
     if (!requestConf.url) {
-      throw new Error("request URL was not specified");
+      throw new Error('request URL was not specified');
     }
     requestConf.url = this.absoluteURL(String(requestConf.url));
     if (this.proxyServer) {
       requestConf.proxy = this.proxyServer;
     }
 
-    var authToken = jwt.sign({iss: this.apiKey}, this.apiSecret, {
-      algorithm: "HS256",
+    var authToken = jwt.sign({ iss: this.apiKey }, this.apiSecret, {
+      algorithm: 'HS256',
       expiresIn: this.apiJwtExpiresIn,
     });
 
     // Make sure the request won't time out before the JWT expires.
     // This may be useful for slow file uploads.
-    requestConf.timeout = (this.apiJwtExpiresIn * 1000) + 500;
+    requestConf.timeout = this.apiJwtExpiresIn * 1000 + 500;
 
     requestConf.headers = {
-      Authorization: "JWT " + authToken,
-      Accept: "application/json",
+      Authorization: 'JWT ' + authToken,
+      Accept: 'application/json',
       ...requestConf.headers,
     };
 
@@ -563,7 +605,7 @@ export class Client {
    * @param {RequestMethodOptions} options
    * @returns {RequestMethodReturnValue}
    */
-  request(method, requestConf, {throwOnBadResponse=true} = {}) {
+  request(method, requestConf, { throwOnBadResponse = true } = {}) {
     method = method.toLowerCase();
 
     return new Promise((resolve, reject) => {
@@ -589,13 +631,14 @@ export class Client {
          * @param {string} body
          */
         (error, httpResponse, body) => {
-        if (error) {
-          reject(error);
-          return;
-        }
+          if (error) {
+            reject(error);
+            return;
+          }
 
-        resolve([httpResponse, body]);
-      });
+          resolve([httpResponse, body]);
+        },
+      );
     }).then(
       /**
        * @param {[Response, string]} promise params
@@ -604,30 +647,37 @@ export class Client {
         if (throwOnBadResponse) {
           if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
             throw new Error(
-              "Received bad response from " +
-              this.absoluteURL(String(requestConf.url)) + "; " +
-              "status: " + httpResponse.statusCode + "; " +
-              "response: " + formatResponse(body));
+              'Received bad response from ' +
+                this.absoluteURL(String(requestConf.url)) +
+                '; ' +
+                'status: ' +
+                httpResponse.statusCode +
+                '; ' +
+                'response: ' +
+                formatResponse(body),
+            );
           }
         }
 
         if (
           httpResponse.headers &&
-          httpResponse.headers["content-type"] === "application/json" &&
-          typeof body === "string"
+          httpResponse.headers['content-type'] === 'application/json' &&
+          typeof body === 'string'
         ) {
           try {
             body = JSON.parse(body);
           } catch (e) {
-            this.logger.log("Failed to parse JSON response from server:", e);
+            this.logger.log('Failed to parse JSON response from server:', e);
           }
         }
-        this.debug(`[API] ${method.toUpperCase()} response:\n`,
+        this.debug(
+          `[API] ${method.toUpperCase()} response:\n`,
           `Status: ${httpResponse.statusCode}\n`,
-          {headers: httpResponse.headers, response: body});
+          { headers: httpResponse.headers, response: body },
+        );
 
         return [httpResponse, body];
-      }
+      },
     );
   }
 
@@ -643,13 +693,13 @@ export class Client {
      * @param {object} obj
      */
     function redact(obj) {
-      if (typeof obj !== "object" || !obj) {
+      if (typeof obj !== 'object' || !obj) {
         return obj;
       }
       if (obj.headers) {
-        ["Authorization", "cookie", "set-cookie"].forEach(function(hdr) {
+        ['Authorization', 'cookie', 'set-cookie'].forEach(function(hdr) {
           if (obj.headers[hdr]) {
-            obj.headers[hdr] = "<REDACTED>";
+            obj.headers[hdr] = '<REDACTED>';
           }
         });
       }
@@ -660,16 +710,15 @@ export class Client {
     }
 
     var args = Array.prototype.map.call(arguments, function(val) {
-      if (typeof val === "object") {
+      if (typeof val === 'object') {
         val = deepcopy(val);
         val = redact(val);
       }
       return val;
     });
-    this.logger.log("[sign-addon]", ...args);
+    this.logger.log('[sign-addon]', ...args);
   }
 }
-
 
 /**
  * A pseudo progress indicator.
@@ -686,19 +735,20 @@ export class PseudoProgress {
    * @property {typeof defaultClearInterval=} clearInterval
    * @property {typeof process.stdout=} stdout
    */
-  constructor({preamble="",
-               setInterval=defaultSetInterval,
-               clearInterval=defaultClearInterval,
-               stdout=process.stdout} = {}) {
-
+  constructor({
+    preamble = '',
+    setInterval = defaultSetInterval,
+    clearInterval = defaultClearInterval,
+    stdout = process.stdout,
+  } = {}) {
     /** @type {string[]} */
     this.bucket = [];
     this.interval = null;
     this.motionCounter = 1;
 
     this.preamble = preamble;
-    this.preamble += " [";
-    this.addendum = "]";
+    this.preamble += ' [';
+    this.addendum = ']';
     this.setInterval = setInterval;
     this.clearInterval = clearInterval;
     this.stdout = stdout;
@@ -712,7 +762,7 @@ export class PseudoProgress {
     this.emptyBucketPointers = [];
     var bucketSize = shellWidth - this.preamble.length - this.addendum.length;
     for (var i = 0; i < bucketSize; i++) {
-      this.bucket.push(" ");
+      this.bucket.push(' ');
       this.emptyBucketPointers.push(i);
     }
   }
@@ -746,15 +796,16 @@ export class PseudoProgress {
     this.fillBucket();
     // The bucket has already filled to the terminal width at this point
     // but for copy/paste purposes, add a new line:
-    this.stdout.write("\n");
+    this.stdout.write('\n');
   }
 
   randomlyFillBucket() {
     // randomly fill a bucket (the width of the shell) with dots.
-    var randomIndex = Math.floor(Math.random() *
-                                 this.emptyBucketPointers.length);
+    var randomIndex = Math.floor(
+      Math.random() * this.emptyBucketPointers.length,
+    );
     var pointer = this.emptyBucketPointers[randomIndex];
-    this.bucket[pointer] = ".";
+    this.bucket[pointer] = '.';
 
     this.showBucket();
 
@@ -762,7 +813,7 @@ export class PseudoProgress {
     /** @type {number[]} */
     var newPointers = [];
     this.emptyBucketPointers.forEach((pointer) => {
-      if (this.bucket[pointer] === " ") {
+      if (this.bucket[pointer] === ' ') {
         isFull = false;
         newPointers.push(pointer);
       }
@@ -775,7 +826,7 @@ export class PseudoProgress {
   fillBucket() {
     // fill the whole bucket with dots to indicate completion.
     this.bucket = this.bucket.map(function() {
-      return ".";
+      return '.';
     });
     this.showBucket();
   }
@@ -783,16 +834,17 @@ export class PseudoProgress {
   moveBucket() {
     // animate dots moving in a forward motion.
     for (var i = 0; i < this.bucket.length; i++) {
-      this.bucket[i] = ((i - this.motionCounter) % 3) ? " " : ".";
+      this.bucket[i] = (i - this.motionCounter) % 3 ? ' ' : '.';
     }
     this.showBucket();
 
-    this.motionCounter ++;
+    this.motionCounter++;
   }
 
   showBucket() {
-    this.stdout.write("\r" + this.preamble + this.bucket.join("") +
-                      this.addendum);
+    this.stdout.write(
+      '\r' + this.preamble + this.bucket.join('') + this.addendum,
+    );
   }
 }
 
@@ -811,16 +863,16 @@ export function formatResponse(response, options = {}) {
   };
   var prettyResponse = response;
   var stringify = options._stringifyToJson || JSON.stringify;
-  if (typeof prettyResponse === "object") {
+  if (typeof prettyResponse === 'object') {
     try {
       prettyResponse = stringify(prettyResponse);
     } catch (e) {
       //
     }
   }
-  if (typeof prettyResponse === "string") {
+  if (typeof prettyResponse === 'string') {
     if (prettyResponse.length > options.maxLength) {
-      prettyResponse = prettyResponse.substring(0, options.maxLength) + "...";
+      prettyResponse = prettyResponse.substring(0, options.maxLength) + '...';
     }
   }
   return prettyResponse.toString();
@@ -836,7 +888,7 @@ export function getUrlBasename(absUrl) {
   // TODO: `url.parse()` might return `undefined` so we need to check that first.
   // @ts-ignore
   const urlPath = path.basename(url.parse(absUrl).path);
-  const parts = urlPath.split("?");
+  const parts = urlPath.split('?');
 
   return parts[0];
 }

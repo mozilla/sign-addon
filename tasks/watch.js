@@ -11,10 +11,6 @@ module.exports = {
       'tests/**/*.js*',
       'webpack.config.js',
     ],
-    tasks: [
-      'build-tests',
-      'mochaTest',
-      'lint',
-    ],
+    tasks: ['build-tests', 'mochaTest', 'lint'],
   },
 };

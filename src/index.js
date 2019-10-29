@@ -1,8 +1,8 @@
 // Importing this like `import fs from "mz/fs"` was causing usage on
 // npm 2.x to throw missing dependency errors. *shrug*
-import {fs} from "mz";
+import { fs } from 'mz';
 
-import {Client as DefaultAMOClient} from "./amo-client";
+import { Client as DefaultAMOClient } from './amo-client';
 
 /** @typedef {import("request").OptionsWithUrl} RequestConfig */
 /** @typedef {import("./amo-client").ClientParams} ClientParams */
@@ -27,67 +27,63 @@ import {Client as DefaultAMOClient} from "./amo-client";
  *
  * @param {SignAddonParams} params
  */
-export default function signAddon(
-  {
-    // Absolute path to add-on XPI file.
-    xpiPath,
-    // The add-on ID as recognized by AMO. Example: my-addon@jetpack
-    id,
-    // The add-on version number for AMO.
-    version,
-    // Your API key (JWT issuer) from AMO Devhub.
-    apiKey,
-    // Your API secret (JWT secret) from AMO Devhub.
-    apiSecret,
-    // Optional arguments:
-    apiUrlPrefix="https://addons.mozilla.org/api/v3",
-    // Number of seconds until the JWT token for the API request expires.
-    // This must match the expiration time that the API server accepts.
-    apiJwtExpiresIn,
-    verbose=false,
-    // The release channel (listed or unlisted).
-    // Ignored for new add-ons, which are always unlisted.
-    // Defaults to most recently used channel.
-    channel,
-    // Number of milleseconds to wait before giving up on a
-    // response from Mozilla's web service.
-    timeout,
-    // Absolute directory to save downloaded files in.
-    downloadDir,
-    // Optional proxy to use for all API requests,
-    // such as "http://yourproxy:6000"
-    apiProxy,
-    // Optional object to pass into request() for additional configuration.
-    // Not all properties are guaranteed to be applied.
-    apiRequestConfig,
-    AMOClient=DefaultAMOClient,
-  }) {
+export default function signAddon({
+  // Absolute path to add-on XPI file.
+  xpiPath,
+  // The add-on ID as recognized by AMO. Example: my-addon@jetpack
+  id,
+  // The add-on version number for AMO.
+  version,
+  // Your API key (JWT issuer) from AMO Devhub.
+  apiKey,
+  // Your API secret (JWT secret) from AMO Devhub.
+  apiSecret,
+  // Optional arguments:
+  apiUrlPrefix = 'https://addons.mozilla.org/api/v3',
+  // Number of seconds until the JWT token for the API request expires.
+  // This must match the expiration time that the API server accepts.
+  apiJwtExpiresIn,
+  verbose = false,
+  // The release channel (listed or unlisted).
+  // Ignored for new add-ons, which are always unlisted.
+  // Defaults to most recently used channel.
+  channel,
+  // Number of milleseconds to wait before giving up on a
+  // response from Mozilla's web service.
+  timeout,
+  // Absolute directory to save downloaded files in.
+  downloadDir,
+  // Optional proxy to use for all API requests,
+  // such as "http://yourproxy:6000"
+  apiProxy,
+  // Optional object to pass into request() for additional configuration.
+  // Not all properties are guaranteed to be applied.
+  apiRequestConfig,
+  AMOClient = DefaultAMOClient,
+}) {
+  return new Promise((resolve) => {
+    /**
+     * @param {string} name
+     */
+    function reportEmpty(name) {
+      throw new Error(`required argument was empty: ${name}`);
+    }
 
-  return new Promise(
-    (resolve) => {
+    if (!xpiPath) {
+      reportEmpty('xpiPath');
+    }
+    if (!version) {
+      reportEmpty('version');
+    }
+    if (!apiSecret) {
+      reportEmpty('apiSecret');
+    }
+    if (!apiKey) {
+      reportEmpty('apiKey');
+    }
 
-      /**
-       * @param {string} name
-       */
-      function reportEmpty(name) {
-        throw new Error(`required argument was empty: ${name}`);
-      }
-
-      if (!xpiPath) {
-        reportEmpty("xpiPath");
-      }
-      if (!version) {
-        reportEmpty("version");
-      }
-      if (!apiSecret) {
-        reportEmpty("apiSecret");
-      }
-      if (!apiKey) {
-        reportEmpty("apiKey");
-      }
-
-      resolve();
-    })
+    resolve();
+  })
     .then(() => fs.stat(xpiPath))
     .catch((statError) => {
       throw new Error(`error with ${xpiPath}: ${statError}`);
@@ -98,7 +94,6 @@ export default function signAddon(
       }
     })
     .then(() => {
-
       let client = new AMOClient({
         apiKey,
         apiSecret,
@@ -117,10 +112,8 @@ export default function signAddon(
         version: version,
         channel: channel,
       });
-
     });
 }
-
 
 /**
  * @param {SignAddonParams} options
@@ -133,15 +126,15 @@ export default function signAddon(
  */
 export function signAddonAndExit(
   options,
-  {systemProcess=process, throwError=false, logger=console}
+  { systemProcess = process, throwError = false, logger = console },
 ) {
   return signAddon(options)
     .then((result) => {
-      logger.log(result.success ? "SUCCESS" : "FAIL");
+      logger.log(result.success ? 'SUCCESS' : 'FAIL');
       systemProcess.exit(result.success ? 0 : 1);
     })
     .catch((err) => {
-      logger.error("FAIL");
+      logger.error('FAIL');
       if (throwError) {
         throw err;
       }
