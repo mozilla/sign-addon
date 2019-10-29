@@ -19,6 +19,10 @@
     "module": false,
     "require": false
   },
+  "extends": [
+    "prettier",
+    "prettier/@typescript-eslint"
+  ],
   "rules": {
     "block-scoped-var": 0,
     "camelcase": 0,
@@ -54,7 +58,6 @@
     "no-underscore-dangle": 0,
     "no-unused-vars": 2,
     "no-with": 2,
-    "quotes": [2, "double", "avoid-escape"],
     "quote-props": [1, "consistent-as-needed"],
     "semi": [2, "always"],
     "space-infix-ops": 0,

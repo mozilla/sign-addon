@@ -119,7 +119,21 @@ Install all requirements and run tests from the source:
     npm install
     npm start
 
+### Prettier
+
+We use [Prettier][] to automatically format our JavaScript code and stop all the on-going debates over styles. As a developer, you have to run it (with `npm run prettier-dev`) before submitting a Pull Request.
+
 ### Useful commands
+
+In the project directory, you can run the following commands. There are a few commands not mentioned here (see `package.json`) but those are only used by internal processes.
+
+##### `npm run prettier`
+
+This runs [Prettier][] to automatically format the entire codebase.
+
+##### `npm run prettier-dev`
+
+This runs [Prettier][] on only your changed files. This is intended for development.
 
 #### `npm run typecheck`
 
@@ -199,4 +213,8 @@ To create a new release, do the following:
   it will automatically publish the package to
   [npm](https://www.npmjs.com/package/sign-addon).
 
+<<<<<<< HEAD
 [typescript]: https://www.typescriptlang.org/
+=======
+[prettier]: https://prettier.io/
+>>>>>>> 8202908... feat: Setup prettier

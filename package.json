@@ -8,6 +8,9 @@
     "changelog": "conventional-changelog -p angular -u",
     "changelog-lint": "commitlint --from master",
     "lint": "grunt lint",
+    "prettier": "prettier --write '**'",
+    "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `yarn prettier-dev` before committing\n\n' && exit 1)",
+    "prettier-dev": "pretty-quick --branch master",
     "start": "grunt develop",
     "test": "grunt test",
     "typecheck": "tsc --noEmit"
@@ -17,8 +20,11 @@
     "deepcopy": "2.0.0",
     "es6-error": "4.1.1",
     "es6-promisify": "6.0.2",
+    "eslint-config-prettier": "6.5.0",
     "jsonwebtoken": "8.5.1",
     "mz": "2.7.0",
+    "prettier": "1.18.2",
+    "pretty-quick": "2.0.0",
     "request": "2.88.0",
     "source-map-support": "0.5.13",
     "stream-to-promise": "2.2.0"
