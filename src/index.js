@@ -5,22 +5,23 @@ import {fs} from "mz";
 import {Client as DefaultAMOClient} from "./amo-client";
 
 /** @typedef {import("request").OptionsWithUrl} RequestConfig */
+/** @typedef {import("./amo-client").ClientParams} ClientParams */
 
 /**
  * @typedef {object} SignAddonParams
  * @property {string} xpiPath
  * @property {string} id
  * @property {string} version
- * @property {string} apiKey
- * @property {string} apiSecret
- * @property {string=} apiUrlPrefix
- * @property {number} apiJwtExpiresIn
- * @property {boolean} verbose
- * @property {string} channel
- * @property {number} timeout
- * @property {string} downloadDir
- * @property {string=} apiProxy
- * @property {RequestConfig=} apiRequestConfig
+ * @property {ClientParams['apiKey']} apiKey
+ * @property {ClientParams['apiSecret']} apiSecret
+ * @property {ClientParams['apiUrlPrefix']=} apiUrlPrefix
+ * @property {ClientParams['apiJwtExpiresIn']} apiJwtExpiresIn
+ * @property {ClientParams['debugLogging']=} verbose
+ * @property {"listed" | "unlisted"} channel
+ * @property {ClientParams['signedStatusCheckTimeout']=} timeout
+ * @property {ClientParams['downloadDir']} downloadDir
+ * @property {ClientParams['proxyServer']=} apiProxy
+ * @property {ClientParams['requestConfig']=} apiRequestConfig
  * @property {typeof DefaultAMOClient=} AMOClient
  *
  * @param {SignAddonParams} params
@@ -121,13 +122,13 @@ export default function signAddon(
 
 
 /**
- * @param {object} options
+ * @param {SignAddonParams} options
  * @param {{
  *   systemProcess?: typeof process,
  *   throwError?: false,
  *   logger?: typeof console
  * }} extras
- * @return {Promise<void>}
+ * @returns {Promise<void>}
  */
 export function signAddonAndExit(
   options,

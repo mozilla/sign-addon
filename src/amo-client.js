@@ -33,6 +33,24 @@ const defaultClearInterval = clearInterval;
  */
 
 /**
+ * @typedef {object} ClientParams
+ * @property {string} apiKey - API key string from the Developer Hub
+ * @property {string} apiSecret - API secret string from the Developer Hub
+ * @property {string} apiUrlPrefix - API URL prefix, including any leading paths
+ * @property {number} apiJwtExpiresIn - Number of seconds until the JWT token for the API request expires. This must match the expiration time that the API server accepts
+ * @property {boolean=} debugLogging - When true, log more information
+ * @property {number=} signedStatusCheckInterval - A period in millesconds between checks when waiting on add-on signing
+ * @property {number=} signedStatusCheckTimeout -  A length in millesconds to give up if the add-on hasn't been signed
+ * @property {typeof console=} logger
+ * @property {string=} downloadDir - Absolute path to save downloaded files to. The working directory will be used by default
+ * @property {typeof defaultFs=} fs
+ * @property {typeof defaultRequest=} request
+ * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
+ * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
+ * @property {PseudoProgress=} validateProgress
+ */
+
+/**
  * addons.mozilla.org API client.
  */
 export class Client {
@@ -40,7 +58,7 @@ export class Client {
    * Type for `this.request()`.
    *
    * @typedef {object} RequestMethodOptions
-   * @property {boolean=} throwOnBadResponse - if true, an error will be thrown when not response status is not 2xx
+   * @property {boolean=} throwOnBadResponse - if true, an error will be thrown when response status is not 2xx
    */
 
   /**
@@ -50,34 +68,12 @@ export class Client {
    */
 
   /**
-   * Type for `this.get()`, `this.post()`, etc.
-   *
-   * @typedef {(requestConf: RequestConfig, options: RequestMethodOptions) => RequestMethodReturnValue} HttpMethod
-   */
-
-  /**
    * See: https://addons-server.readthedocs.io/en/latest/topics/api/signing.html#get--api-v4-addons-(string-guid)-versions-(string-version)-[uploads-(string-upload-pk)-]
    *
    * @typedef {{ signed: boolean, download_url: string, hash: string }} File
    */
 
   /**
-   * @typedef {object} ClientParams
-   * @property {string} apiKey - API key string from the Developer Hub
-   * @property {string} apiSecret - API secret string from the Developer Hub
-   * @property {string} apiUrlPrefix - API URL prefix, including any leading paths
-   * @property {number=} apiJwtExpiresIn - Number of seconds until the JWT token for the API request expires. This must match the expiration time that the API server accepts
-   * @property {boolean=} debugLogging - When true, log more information
-   * @property {number=} signedStatusCheckInterval - A period in millesconds between checks when waiting on add-on signing
-   * @property {number=} signedStatusCheckTimeout -  A length in millesconds to give up if the add-on hasn't been signed
-   * @property {typeof console=} logger
-   * @property {string=} downloadDir - Absolute path to save downloaded files to. The working directory will be used by default
-   * @property {typeof defaultFs=} fs
-   * @property {typeof defaultRequest=} request
-   * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
-   * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
-   * @property {PseudoProgress=} validateProgress
-   *
    * @param {ClientParams} params
    */
   constructor({apiKey,
@@ -120,14 +116,16 @@ export class Client {
   /**
    * Sign a new version of your add-on at addons.mozilla.org.
    *
-   * @typedef {Object} SignParams
+   * @typedef {object} SignParams
    * @property {string=} guid - optional add-on GUID (ID in install.rdf)
    * @property {string} version - add-on version string
-   * @property {string} channel - release channel (listed or unlisted)
+   * @property {"listed" | "unlisted"} channel - release channel (listed or unlisted)
    * @property {string} xpiPath - path to xpi file
    *
+   * @typedef {{ success: boolean, downloadedFiles?: string[], id?: string }} SignResult
+   *
    * @param {SignParams} signParams
-   * @returns {Promise<{ success: boolean, downloadedFiles?: string[], id?: string }>}
+   * @returns {Promise<SignResult>}
    */
   sign({guid, version, channel, xpiPath}) {
 
@@ -196,7 +194,7 @@ export class Client {
    *
    * @param {string} statusUrl - URL to GET for add-on status
    * @param {object=} opt - options
-   * @returns {Promise<{ success: boolean, downloadedFiles?: string[], id?: string }>}
+   * @returns {Promise<SignResult>}
    */
   waitForSignedAddon(statusUrl, opt) {
     /** @type {SigningStatus=} */
@@ -263,7 +261,7 @@ export class Client {
                 return this.downloadSignedFiles(data.files)
                   .then(
                     /**
-                     * @param {{ success: boolean, downloadedFiles: string[] }} result
+                     * @param {SignResult} result
                      */
                     (result) => {
                       resolve({
@@ -309,15 +307,12 @@ export class Client {
    *   request?: typeof defaultRequest,
    *   stdout?: typeof process.stdout
    * }} options
-   * @returns {Promise<{ success: boolean, downloadedFiles: string[] }>}
+   * @returns {Promise<SignResult>}
    */
   downloadSignedFiles(signedFiles,
                       {createWriteStream=defaultFs.createWriteStream,
-                       request,
+                       request=this._request,
                        stdout=process.stdout} = {}) {
-    if (!request) {
-      request = this._request;
-    }
     /** @type {Promise<string>[]} */
     var allDownloads = [];
     /** @type {null | number} */
@@ -338,8 +333,7 @@ export class Client {
         }
         progress = padding + amount + "% ";
       }
-      stdout.write("\r" +
-          "Downloading signed files: " + progress);
+      stdout.write("\r" + "Downloading signed files: " + progress);
     }
 
     /**
@@ -352,7 +346,7 @@ export class Client {
         var fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
         var out = createWriteStream(fileName);
 
-        request && request(
+        request(
           this.configureRequest({
             method: "GET",
             url: fileUrl,
@@ -429,7 +423,7 @@ export class Client {
     }).then(
       /**
        * @param {string[]} downloadedFiles
-       * @returns {{ success: boolean, downloadedFiles: string[] }}
+       * @returns {SignResult}
        */
       (downloadedFiles) => {
         this.logger.log("Downloaded:");
@@ -717,7 +711,7 @@ export class PseudoProgress {
   }
 
   /**
-   * @typedef {Object} AnimateConfig
+   * @typedef {object} AnimateConfig
    * @property {number} speed
    *
    * @param {AnimateConfig=} conf
@@ -801,7 +795,7 @@ export class PseudoProgress {
  *
  * @param {string|object} response - either the response's body or an object representing a JSON API response.
  * @param {object=} options
- * @return {string}
+ * @returns {string}
  */
 export function formatResponse(response, options = {}) {
   options = {
@@ -829,7 +823,7 @@ export function formatResponse(response, options = {}) {
  * Returns the basename of a URL, suitable for saving to disk.
  *
  * @param {string} absUrl
- * @return {string}
+ * @returns {string}
  */
 export function getUrlBasename(absUrl) {
   // TODO: `url.parse()` might return `undefined` so we need to check that first.
