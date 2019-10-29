@@ -180,6 +180,5 @@ To create a new release, do the following:
 - Create a [new release](https://github.com/mozilla/sign-addon/releases/new) and paste in the changelog Markdown. It may require some manual editing. For example, some commit messages might have been truncated. Title the github release after the new version you just added in the previous commit to `package.json` (example: `1.0.4`).
 - When you publish the release, github creates a tag. When TravisCI builds the tag, it will automatically publish the package to [npm](https://www.npmjs.com/package/sign-addon).
 
-<<<<<<< HEAD [typescript]: https://www.typescriptlang.org/ ======= [prettier]: https://prettier.io/
-
-> > > > > > > 8202908... feat: Setup prettier
+[typescript]: https://www.typescriptlang.org/
+[prettier]: https://prettier.io/
