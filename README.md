@@ -119,6 +119,18 @@ Install all requirements and run tests from the source:
     npm install
     npm start
 
+### Useful commands
+
+#### `npm run typecheck`
+
+This checks for [TypeScript][] errors in all files, including test files.
+
+You can run this command in "watch mode" while working on this project:
+
+```
+$ npm run typecheck -- --watch
+```
+
 ### Linking
 
 The `sign-addon` module is meant to be used as a dependency.
@@ -186,3 +198,5 @@ To create a new release, do the following:
   When TravisCI builds the tag,
   it will automatically publish the package to
   [npm](https://www.npmjs.com/package/sign-addon).
+
+[typescript]: https://www.typescriptlang.org/

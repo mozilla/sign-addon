@@ -4,7 +4,29 @@ import {fs} from "mz";
 
 import {Client as DefaultAMOClient} from "./amo-client";
 
+/** @typedef {import("request").OptionsWithUrl} RequestConfig */
+/** @typedef {import("./amo-client").ClientParams} ClientParams */
+/** @typedef {import("./amo-client").ReleaseChannel} ReleaseChannel */
 
+/**
+ * @typedef {object} SignAddonParams
+ * @property {string} xpiPath
+ * @property {string} id
+ * @property {string} version
+ * @property {ClientParams['apiKey']} apiKey
+ * @property {ClientParams['apiSecret']} apiSecret
+ * @property {ClientParams['apiUrlPrefix']=} apiUrlPrefix
+ * @property {ClientParams['apiJwtExpiresIn']} apiJwtExpiresIn
+ * @property {ClientParams['debugLogging']=} verbose
+ * @property {ReleaseChannel} channel
+ * @property {ClientParams['signedStatusCheckTimeout']=} timeout
+ * @property {ClientParams['downloadDir']} downloadDir
+ * @property {ClientParams['proxyServer']=} apiProxy
+ * @property {ClientParams['requestConfig']=} apiRequestConfig
+ * @property {typeof DefaultAMOClient=} AMOClient
+ *
+ * @param {SignAddonParams} params
+ */
 export default function signAddon(
   {
     // Absolute path to add-on XPI file.
@@ -44,6 +66,9 @@ export default function signAddon(
   return new Promise(
     (resolve) => {
 
+      /**
+       * @param {string} name
+       */
       function reportEmpty(name) {
         throw new Error(`required argument was empty: ${name}`);
       }
@@ -97,8 +122,19 @@ export default function signAddon(
 }
 
 
+/**
+ * @param {SignAddonParams} options
+ * @param {{
+ *   systemProcess?: typeof process,
+ *   throwError?: false,
+ *   logger?: typeof console
+ * }} extras
+ * @returns {Promise<void>}
+ */
 export function signAddonAndExit(
-    options, {systemProcess=process, throwError=false, logger=console}) {
+  options,
+  {systemProcess=process, throwError=false, logger=console}
+) {
   return signAddon(options)
     .then((result) => {
       logger.log(result.success ? "SUCCESS" : "FAIL");

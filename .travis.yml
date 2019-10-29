@@ -13,6 +13,7 @@ before_install:
 - npm install -g npm;
 script:
 - npm test
+- npm run typecheck
 # Run changelog-lint but only on newer versions of Node (because of syntax errors)
 - if [[ ${TRAVIS_NODE_VERSION:0:1} -ge "8" ]]; then
     npm run changelog-lint;
