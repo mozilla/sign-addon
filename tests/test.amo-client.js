@@ -1,30 +1,117 @@
-import { beforeEach, describe, it } from 'mocha';
+/* eslint max-classes-per-file: 0 */
 import path from 'path';
+
+import { beforeEach, describe, it } from 'mocha';
 import { expect } from 'chai';
 import sinon from 'sinon';
 import jwt from 'jsonwebtoken';
 
 import * as amoClient from '../src/amo-client';
 
+class MockProgress {
+  animate() {}
+
+  finish() {}
+}
+
+class MockRequest {
+  constructor(confOverrides) {
+    const defaultResponse = {
+      httpResponse: { statusCode: 200 },
+      responseBody: '',
+      responseError: null,
+    };
+    const conf = {
+      // By default, responses will not be queued.
+      // I.E. the same response will be returned repeatedly.
+      responseQueue: false,
+      ...confOverrides,
+    };
+
+    this.responseQueue = conf.responseQueue;
+    this.returnMultipleResponses = !!this.responseQueue;
+
+    if (!this.returnMultipleResponses) {
+      // If the caller did not queue some responses then assume all
+      // configuration should apply to the response.
+      this.responseQueue = [conf];
+    }
+
+    // Make sure each queued response has the default values.
+    this.responseQueue.forEach((response, i) => {
+      this.responseQueue[i] = { ...defaultResponse, ...response };
+    });
+
+    this.calls = [];
+    this.callMap = {};
+    this.httpResponse = conf.httpResponse;
+    this.responseBody = conf.responseBody;
+    this.responseError = conf.responseError;
+  }
+
+  _mockRequest(method, conf, callback) {
+    const info = { conf };
+    this.calls.push({ ...info, name: method });
+    this.callMap[method] = info;
+
+    let response;
+    if (this.returnMultipleResponses) {
+      response = this.responseQueue.shift();
+    } else {
+      // Always return the same response.
+      response = this.responseQueue[0];
+    }
+    if (!response) {
+      response = {};
+      response.responseError = new Error('Response queue is empty');
+    }
+
+    callback(
+      response.responseError,
+      response.httpResponse,
+      response.responseBody,
+    );
+  }
+
+  get(conf, callback) {
+    return this._mockRequest('get', conf, callback);
+  }
+
+  post(conf, callback) {
+    return this._mockRequest('post', conf, callback);
+  }
+
+  put(conf, callback) {
+    return this._mockRequest('put', conf, callback);
+  }
+
+  patch(conf, callback) {
+    return this._mockRequest('patch', conf, callback);
+  }
+
+  delete(conf, callback) {
+    return this._mockRequest('delete', conf, callback);
+  }
+}
 describe('amoClient.Client', function() {
   function setUp() {
     /* jshint validthis: true */
     this.apiUrlPrefix = 'http://not-a-real-amo-api.com/api/v3';
 
-    this.newClient = (opt) => {
-      opt = {
+    this.newClient = (overrides) => {
+      const opt = {
         apiKey: 'fake-api-key',
         apiSecret: 'fake-api-secret',
         apiUrlPrefix: this.apiUrlPrefix,
         signedStatusCheckInterval: 0,
         fs: {
-          createReadStream: function() {
+          createReadStream() {
             return 'fake-read-stream';
           },
         },
         request: new MockRequest(),
         validateProgress: new MockProgress(),
-        ...opt,
+        ...overrides,
       };
       return new amoClient.Client(opt);
     };
@@ -36,28 +123,30 @@ describe('amoClient.Client', function() {
     beforeEach(function() {
       setUp.call(this);
 
-      this.sign = (conf) => {
-        conf = {
+      this.sign = (confOverrides) => {
+        const conf = {
           guid: 'some-guid',
           version: 'some-version',
           xpiPath: 'some-xpi-path',
-          ...conf,
+          ...confOverrides,
         };
         return this.client.sign(conf);
       };
 
-      this.waitForSignedAddon = (url, options) => {
-        url = url || '/some-status-url';
-        options = {
+      this.waitForSignedAddon = (url, overrides) => {
+        const options = {
           setAbortTimeout: () => {},
-          ...options,
+          ...overrides,
         };
-        return this.client.waitForSignedAddon(url, options);
+        return this.client.waitForSignedAddon(
+          url || '/some-status-url',
+          options,
+        );
       };
     });
 
     function signedResponse(overrides) {
-      var res = {
+      const res = {
         guid: 'an-addon-guid',
         active: true,
         processed: true,
@@ -79,17 +168,17 @@ describe('amoClient.Client', function() {
     }
 
     function getDownloadStubs() {
-      var fakeResponse = {
-        on: function() {
+      const fakeResponse = {
+        on() {
           return this;
         },
-        pipe: function() {
+        pipe() {
           return this;
         },
       };
 
-      var fakeFileWriter = {
-        on: function(event, handler) {
+      const fakeFileWriter = {
+        on(event, handler) {
           if (event === 'finish') {
             // Simulate completion of the download immediately when the
             // handler is registered.
@@ -98,23 +187,23 @@ describe('amoClient.Client', function() {
         },
       };
 
-      var files = signedResponse().responseBody.files;
-      var fakeRequest = sinon.spy(() => fakeResponse);
-      var createWriteStream = sinon.spy(() => fakeFileWriter);
-      var stdout = {
-        write: function() {},
+      const { files } = signedResponse().responseBody;
+      const fakeRequest = sinon.spy(() => fakeResponse);
+      const createWriteStream = sinon.spy(() => fakeFileWriter);
+      const stdout = {
+        write() {},
       };
 
       return { files, request: fakeRequest, createWriteStream, stdout };
     }
 
     it('lets you sign an add-on', function() {
-      var apiStatusUrl = 'https://api/addon/version/upload/abc123';
-      var conf = {
+      const apiStatusUrl = 'https://api/addon/version/upload/abc123';
+      const conf = {
         guid: 'a-guid',
         version: 'a-version',
       };
-      var waitForSignedAddon = sinon.spy(() => {});
+      const waitForSignedAddon = sinon.spy(() => {});
       this.client.waitForSignedAddon = waitForSignedAddon;
 
       this.client._request = new MockRequest({
@@ -127,16 +216,16 @@ describe('amoClient.Client', function() {
       });
 
       return this.sign(conf).then(() => {
-        var putCall = this.client._request.calls[0];
+        const putCall = this.client._request.calls[0];
         expect(putCall.name).to.be.equal('put');
 
-        var partialUrl = '/addons/' + conf.guid + '/versions/' + conf.version;
+        const partialUrl = `/addons/${conf.guid}/versions/${conf.version}`;
         expect(putCall.conf.url).to.include(partialUrl);
         expect(putCall.conf.formData.upload).to.be.equal('fake-read-stream');
         // When doing a PUT, the version is in the URL not the form data.
-        expect(putCall.conf.formData.version).to.be.undefined;
+        expect(putCall.conf.formData.version).to.be.equal(undefined);
         // When no channel is supplied, the API is expected to use the most recent channel.
-        expect(putCall.conf.formData.channel).to.be.undefined;
+        expect(putCall.conf.formData.channel).to.be.equal(undefined);
 
         expect(waitForSignedAddon.called).to.be.equal(true);
         expect(waitForSignedAddon.firstCall.args[0]).to.be.equal(apiStatusUrl);
@@ -162,7 +251,7 @@ describe('amoClient.Client', function() {
       });
 
       return this.sign(conf).then(() => {
-        var call = this.client._request.calls[0];
+        const call = this.client._request.calls[0];
         expect(call.name).to.be.equal('post');
 
         // Make sure the endpoint ends with /addons/
@@ -170,7 +259,7 @@ describe('amoClient.Client', function() {
         expect(call.conf.formData.upload).to.be.equal('fake-read-stream');
         expect(call.conf.formData.version).to.be.equal(conf.version);
         // Channel is not a valid parameter for new add-ons.
-        expect(call.conf.formData.channel).to.be.undefined;
+        expect(call.conf.formData.channel).to.be.equal(undefined);
 
         expect(waitForSignedAddon.called).to.be.equal(true);
         expect(waitForSignedAddon.firstCall.args[0]).to.be.equal(apiStatusUrl);
@@ -178,10 +267,10 @@ describe('amoClient.Client', function() {
     });
 
     it('lets you sign an add-on on a specific channel', function() {
-      var conf = {
+      const conf = {
         channel: 'listed',
       };
-      var waitForSignedAddon = sinon.spy(() => {});
+      const waitForSignedAddon = sinon.spy(() => {});
       this.client.waitForSignedAddon = waitForSignedAddon;
 
       this.client._request = new MockRequest({
@@ -196,11 +285,11 @@ describe('amoClient.Client', function() {
     });
 
     it('lets you sign an add-on without an ID ignoring channel', function() {
-      var conf = {
+      const conf = {
         guid: null,
         channel: 'listed',
       };
-      var waitForSignedAddon = sinon.spy(() => {});
+      const waitForSignedAddon = sinon.spy(() => {});
       this.client.waitForSignedAddon = waitForSignedAddon;
 
       this.client._request = new MockRequest({
@@ -208,13 +297,14 @@ describe('amoClient.Client', function() {
       });
 
       return this.sign(conf).then(() => {
-        expect(this.client._request.calls[0].conf.formData.channel).to.be
-          .undefined;
+        expect(this.client._request.calls[0].conf.formData.channel).to.be.equal(
+          undefined,
+        );
       });
     });
 
     it('handles already validated add-ons', function() {
-      var waitForSignedAddon = sinon.spy(() => {});
+      const waitForSignedAddon = sinon.spy(() => {});
       this.client.waitForSignedAddon = waitForSignedAddon;
 
       this.client._request = new MockRequest({
@@ -258,10 +348,10 @@ describe('amoClient.Client', function() {
     });
 
     it('waits for passing validation', function() {
-      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
+      const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
 
-      var files = [
+      const files = [
         {
           signed: true,
           download_url: 'http://amo/the-signed-file-1.2.3.xpi',
@@ -270,11 +360,11 @@ describe('amoClient.Client', function() {
       this.client._request = new MockRequest({
         responseQueue: [
           signedResponse({ valid: false, processed: false }),
-          signedResponse({ valid: true, processed: true, files: files }),
+          signedResponse({ valid: true, processed: true, files }),
         ],
       });
 
-      var statusUrl = '/addons/something/versions/1.2.3/';
+      const statusUrl = '/addons/something/versions/1.2.3/';
       return this.waitForSignedAddon(statusUrl).then(() => {
         // Expect exactly two GETs before resolution.
         expect(this.client._request.calls.length).to.be.equal(2);
@@ -307,7 +397,7 @@ describe('amoClient.Client', function() {
     });
 
     it('waits for for fully reviewed files', function() {
-      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
+      const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
 
       this.client._request = new MockRequest({
@@ -327,7 +417,7 @@ describe('amoClient.Client', function() {
     });
 
     it('waits until signed files are ready', function() {
-      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
+      const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
       this.client._request = new MockRequest({
         responseQueue: [
@@ -390,12 +480,12 @@ describe('amoClient.Client', function() {
     });
 
     it('aborts validation check after timeout', function() {
-      var clearTimeout = sinon.spy(() => {});
+      const clearTimeout = sinon.spy(() => {});
 
       return this.client
         .waitForSignedAddon('/status-url', {
-          clearTimeout: clearTimeout,
-          setStatusCheckTimeout: function() {
+          clearTimeout,
+          setStatusCheckTimeout() {
             return 'status-check-timeout-id';
           },
           abortAfter: 0,
@@ -412,16 +502,16 @@ describe('amoClient.Client', function() {
     });
 
     it('can configure signing status check timeout', function() {
-      var clearTimeout = sinon.stub();
-      var client = this.newClient({
+      const clearTimeout = sinon.stub();
+      const client = this.newClient({
         // This should cause an immediate timeout.
         signedStatusCheckTimeout: 0,
       });
 
       return client
         .waitForSignedAddon('/status-url', {
-          clearTimeout: clearTimeout,
-          setStatusCheckTimeout: function() {
+          clearTimeout,
+          setStatusCheckTimeout() {
             return 'status-check-timeout-id';
           },
         })
@@ -454,20 +544,20 @@ describe('amoClient.Client', function() {
     });
 
     it('clears abort timeout after resolution', function() {
-      var clearTimeout = sinon.spy(() => {});
+      const clearTimeout = sinon.spy(() => {});
       this.client._request = new MockRequest({
         responseQueue: [signedResponse()],
       });
 
-      var downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
+      const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
       this.client.downloadSignedFiles = downloadSignedFiles;
 
       return this.waitForSignedAddon('/status-url/', {
-        clearTimeout: clearTimeout,
-        setAbortTimeout: function() {
+        clearTimeout,
+        setAbortTimeout() {
           return 'abort-timeout-id';
         },
-        setStatusCheckTimeout: function() {
+        setStatusCheckTimeout() {
           return 'status-check-timeout-id';
         },
       }).then(function() {
@@ -479,17 +569,17 @@ describe('amoClient.Client', function() {
     });
 
     it('downloads signed files', function() {
-      var fakeResponse = {
-        on: function() {
+      const fakeResponse = {
+        on() {
           return this;
         },
-        pipe: function() {
+        pipe() {
           return this;
         },
       };
 
-      var fakeFileWriter = {
-        on: function(event, handler) {
+      const fakeFileWriter = {
+        on(event, handler) {
           if (event === 'finish') {
             // Simulate completion of the download immediately when the
             // handler is registered.
@@ -498,20 +588,23 @@ describe('amoClient.Client', function() {
         },
       };
 
-      var files = signedResponse().responseBody.files;
-      var fakeRequest = sinon.spy(() => fakeResponse);
-      var createWriteStream = sinon.spy(() => fakeFileWriter);
+      const { files } = signedResponse().responseBody;
+      const fakeRequest = sinon.spy(() => fakeResponse);
+      const createWriteStream = sinon.spy(() => fakeFileWriter);
 
       return this.client
         .downloadSignedFiles(files, {
           request: fakeRequest,
-          createWriteStream: createWriteStream,
+          createWriteStream,
           stdout: {
-            write: function() {},
+            write() {},
           },
         })
         .then(function(result) {
-          var filePath = path.join(process.cwd(), 'some-signed-file-1.2.3.xpi');
+          const filePath = path.join(
+            process.cwd(),
+            'some-signed-file-1.2.3.xpi',
+          );
           expect(result.success).to.be.equal(true);
           expect(result.downloadedFiles).to.be.deep.equal([filePath]);
           expect(createWriteStream.firstCall.args[0]).to.be.equal(filePath);
@@ -523,7 +616,7 @@ describe('amoClient.Client', function() {
 
     it('fails for 404 signed file downloads', function() {
       const fakeResponse = {
-        on: function(event, handler) {
+        on(event, handler) {
           if (event === 'response') {
             // Respond with a 404 to this signed file download.
             handler({
@@ -533,12 +626,12 @@ describe('amoClient.Client', function() {
           }
           return this;
         },
-        pipe: function() {
+        pipe() {
           return this;
         },
       };
 
-      const files = signedResponse().responseBody.files;
+      const { files } = signedResponse().responseBody;
       const fakeRequest = sinon.spy(() => fakeResponse);
       const { createWriteStream } = getDownloadStubs();
 
@@ -547,7 +640,7 @@ describe('amoClient.Client', function() {
           request: fakeRequest,
           createWriteStream,
           stdout: {
-            write: function() {},
+            write() {},
           },
         })
         .then(
@@ -558,31 +651,33 @@ describe('amoClient.Client', function() {
             expect(error.message).to.include(
               'Got a 404 response when downloading',
             );
-            expect(files[0].download_url).to.not.be.undefined;
+            expect(files[0].download_url).to.not.be.equal(undefined);
             expect(error.message).to.include(files[0].download_url);
           },
         );
     });
 
     it('configures a download destination in the contructor', function() {
-      let downloadDir = '/some/fake/destination-dir/';
-      let client = this.newClient({ downloadDir });
-      let stubs = getDownloadStubs();
+      const downloadDir = '/some/fake/destination-dir/';
+      const client = this.newClient({ downloadDir });
+      const stubs = getDownloadStubs();
 
       return client.downloadSignedFiles(stubs.files, stubs).then(() => {
-        var filePath = path.join(downloadDir, 'some-signed-file-1.2.3.xpi');
+        const filePath = path.join(downloadDir, 'some-signed-file-1.2.3.xpi');
         expect(stubs.createWriteStream.firstCall.args[0]).to.be.equal(filePath);
       });
     });
 
     it('fails for unsigned files', function() {
-      var files = signedResponse().responseBody.files;
+      let { files } = signedResponse().responseBody;
       files = files.map(function(fileOb) {
-        // This can happen for certain invalid XPIs.
-        fileOb.signed = false;
-        return fileOb;
+        return {
+          ...fileOb,
+          // This can happen for certain invalid XPIs.
+          signed: false,
+        };
       });
-      let stubs = getDownloadStubs();
+      const stubs = getDownloadStubs();
 
       return this.client
         .downloadSignedFiles(files, stubs)
@@ -596,7 +691,7 @@ describe('amoClient.Client', function() {
     });
 
     it('allows partially signed files', function() {
-      let stubs = getDownloadStubs();
+      const stubs = getDownloadStubs();
       stubs.files.push({
         signed: false,
         download_url: 'http://nope.org/should-not-be-downloaded.xpi',
@@ -605,7 +700,10 @@ describe('amoClient.Client', function() {
       return this.client
         .downloadSignedFiles(stubs.files, stubs)
         .then((result) => {
-          var filePath = path.join(process.cwd(), 'some-signed-file-1.2.3.xpi');
+          const filePath = path.join(
+            process.cwd(),
+            'some-signed-file-1.2.3.xpi',
+          );
           expect(result.success).to.be.equal(true);
           expect(result.downloadedFiles).to.be.deep.equal([filePath]);
           expect(stubs.request.callCount).to.be.equal(stubs.files.length - 1);
@@ -616,16 +714,16 @@ describe('amoClient.Client', function() {
     });
 
     it('handles download errors', function() {
-      let stubs = getDownloadStubs();
+      const stubs = getDownloadStubs();
 
-      var errorResponse = {
-        on: function(event, handler) {
+      const errorResponse = {
+        on(event, handler) {
           if (event === 'error') {
             // Immediately trigger a download error.
             handler(new Error('some download error'));
           }
         },
-        pipe: function() {},
+        pipe() {},
       };
 
       return this.client
@@ -643,7 +741,7 @@ describe('amoClient.Client', function() {
   });
 
   describe('debugging', function() {
-    var fakeLog;
+    let fakeLog;
 
     beforeEach(function() {
       fakeLog = {
@@ -652,7 +750,7 @@ describe('amoClient.Client', function() {
     });
 
     it('can be configured for debug output', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         debugLogging: true,
         logger: fakeLog,
       });
@@ -663,7 +761,7 @@ describe('amoClient.Client', function() {
     });
 
     it('hides debug output by default', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         logger: fakeLog,
       });
       cli.debug('first', 'second');
@@ -671,7 +769,7 @@ describe('amoClient.Client', function() {
     });
 
     it('redacts authorization headers', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         debugLogging: true,
         logger: fakeLog,
       });
@@ -688,7 +786,7 @@ describe('amoClient.Client', function() {
     });
 
     it('redacts set-cookie headers', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         debugLogging: true,
         logger: fakeLog,
       });
@@ -705,7 +803,7 @@ describe('amoClient.Client', function() {
     });
 
     it('redacts cookie headers', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         debugLogging: true,
         logger: fakeLog,
       });
@@ -722,7 +820,7 @@ describe('amoClient.Client', function() {
     });
 
     it('handles null objects', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         debugLogging: true,
         logger: fakeLog,
       });
@@ -731,17 +829,17 @@ describe('amoClient.Client', function() {
     });
 
     it('preserves redacted objects', function() {
-      var cli = new amoClient.Client({
+      const cli = new amoClient.Client({
         debugLogging: true,
         logger: fakeLog,
       });
-      var response = {
+      const response = {
         headers: {
           'set-cookie': ['foo=bar'],
         },
       };
       cli.debug('prefix', {
-        response: response,
+        response,
       });
       expect(response.headers['set-cookie']).to.be.deep.equal(['foo=bar']);
     });
@@ -753,13 +851,13 @@ describe('amoClient.Client', function() {
     });
 
     it('makes requests with an auth token', function() {
-      var request = { url: '/somewhere' };
+      const request = { url: '/somewhere' };
 
       return this.client.get(request).then(() => {
-        var call = this.client._request.calls[0];
-        var headerMatch = call.conf.headers.Authorization.match(/JWT (.*)/);
-        var token = headerMatch[1];
-        var data = jwt.verify(token, this.client.apiSecret);
+        const call = this.client._request.calls[0];
+        const headerMatch = call.conf.headers.Authorization.match(/JWT (.*)/);
+        const token = headerMatch[1];
+        const data = jwt.verify(token, this.client.apiSecret);
         expect(data.iss).to.be.equal(this.client.apiKey);
         expect(data).to.have.keys(['iss', 'iat', 'exp']);
 
@@ -814,49 +912,49 @@ describe('amoClient.Client', function() {
     });
 
     it('lets you configure a request directly', function() {
-      var conf = this.client.configureRequest({ url: '/path' });
+      const conf = this.client.configureRequest({ url: '/path' });
       expect(conf).to.have.keys(['headers', 'timeout', 'url']);
       expect(conf.headers).to.have.keys(['Accept', 'Authorization']);
     });
 
     it('preserves request headers', function() {
-      var headers = { 'X-Custom': 'thing' };
-      var conf = this.client.configureRequest({
+      const headers = { 'X-Custom': 'thing' };
+      const conf = this.client.configureRequest({
         url: '/path',
-        headers: headers,
+        headers,
       });
       expect(conf.headers['X-Custom']).to.be.equal('thing');
     });
 
     it('allows you to override request headers', function() {
-      var headers = { Accept: 'text/html' };
-      var conf = this.client.configureRequest({
+      const headers = { Accept: 'text/html' };
+      const conf = this.client.configureRequest({
         url: '/path',
-        headers: headers,
+        headers,
       });
       expect(conf.headers.Accept).to.be.equal('text/html');
     });
 
     it('makes relative URLs absolute', function() {
-      var urlPath = '/somewhere';
-      var conf = this.client.configureRequest({ url: urlPath });
+      const urlPath = '/somewhere';
+      const conf = this.client.configureRequest({ url: urlPath });
       expect(conf.url).to.be.equal(this.apiUrlPrefix + urlPath);
     });
 
     it('accepts absolute URLs', function() {
-      var absUrl = 'http://some-site/somewhere';
-      var conf = this.client.configureRequest({ url: absUrl });
+      const absUrl = 'http://some-site/somewhere';
+      const conf = this.client.configureRequest({ url: absUrl });
       expect(conf.url).to.be.equal(absUrl);
     });
 
     it('can make any HTTP request', function() {
-      var requests = [];
+      const requests = [];
       ['get', 'put', 'post', 'patch', 'delete'].forEach((method) => {
-        var urlPath = '/some/path';
+        const urlPath = '/some/path';
 
         requests.push(
           this.client[method]({ url: urlPath }).then(() => {
-            var call = this.client._request.callMap[method];
+            const call = this.client._request.callMap[method];
             expect(call.conf.url).to.be.equal(this.apiUrlPrefix + urlPath);
             expect(call.conf.headers).to.have.keys(['Accept', 'Authorization']);
           }),
@@ -914,7 +1012,7 @@ describe('amoClient.Client', function() {
     });
 
     it('rejects the request promise with callback error', function() {
-      var callbackError = new Error('some error');
+      const callbackError = new Error('some error');
       this.client._request = new MockRequest({ responseError: callbackError });
 
       return this.client
@@ -946,27 +1044,27 @@ describe('amoClient.Client', function() {
     });
 
     it('resolves the request promise with the HTTP response', function() {
-      var httpResponse = { statusCode: 201 };
-      this.client._request = new MockRequest({ httpResponse: httpResponse });
+      const httpResponse = { statusCode: 201 };
+      this.client._request = new MockRequest({ httpResponse });
 
       return this.client.get({ url: '/something' }).then((responseResult) => {
-        var returnedResponse = responseResult[0];
+        const returnedResponse = responseResult[0];
         expect(returnedResponse).to.be.equal(httpResponse);
       });
     });
 
     it('resolves the request promise with the response body', function() {
-      var responseBody = 'some text response';
-      this.client._request = new MockRequest({ responseBody: responseBody });
+      const responseBody = 'some text response';
+      this.client._request = new MockRequest({ responseBody });
 
       return this.client.get({ url: '/something' }).then((responseResult) => {
-        var returnedBody = responseResult[1];
+        const returnedBody = responseResult[1];
         expect(returnedBody).to.be.equal(responseBody);
       });
     });
 
     it('resolves the request promise with a JSON object', function() {
-      var data = { someKey: 'some value' };
+      const data = { someKey: 'some value' };
 
       this.client._request = new MockRequest({
         responseBody: JSON.stringify(data),
@@ -979,7 +1077,7 @@ describe('amoClient.Client', function() {
       });
 
       return this.client.get({ url: '/something' }).then((responseResult) => {
-        var result = responseResult[1];
+        const result = responseResult[1];
         expect(result).to.deep.equal(data);
       });
     });
@@ -996,7 +1094,7 @@ describe('amoClient.Client', function() {
       });
 
       return this.client.get({ url: '/something' }).then((responseResult) => {
-        var result = responseResult[1];
+        const result = responseResult[1];
         expect(result).to.be.a('string');
       });
     });
@@ -1005,12 +1103,12 @@ describe('amoClient.Client', function() {
 
 describe('amoClient.formatResponse', function() {
   it('should dump JSON objects', function() {
-    var res = amoClient.formatResponse({ error: 'some error' });
+    const res = amoClient.formatResponse({ error: 'some error' });
     expect(res).to.be.equal('{"error":"some error"}');
   });
 
   it('should truncate long JSON', function() {
-    var res = amoClient.formatResponse(
+    const res = amoClient.formatResponse(
       { error: 'pretend this is really long' },
       { maxLength: 5 },
     );
@@ -1018,8 +1116,8 @@ describe('amoClient.formatResponse', function() {
   });
 
   it('ignores broken JSON objects', function() {
-    var stub = sinon.stub().throws();
-    var res = amoClient.formatResponse(
+    const stub = sinon.stub().throws();
+    const res = amoClient.formatResponse(
       { unserializable: process }, // any complex object
       { _stringifyToJson: stub },
     );
@@ -1027,27 +1125,30 @@ describe('amoClient.formatResponse', function() {
   });
 
   it('should truncate long HTML', function() {
-    var res = amoClient.formatResponse('<h1>pretend this is really long</h1>', {
-      maxLength: 9,
-    });
+    const res = amoClient.formatResponse(
+      '<h1>pretend this is really long</h1>',
+      {
+        maxLength: 9,
+      },
+    );
     expect(res).to.be.equal('<h1>prete...');
   });
 
   it('should leave short HTML in tact', function() {
-    var text = '<h1>404 or whatever</h1>';
-    var res = amoClient.formatResponse(text);
+    const text = '<h1>404 or whatever</h1>';
+    const res = amoClient.formatResponse(text);
     expect(res).to.be.equal(text);
   });
 });
 
 describe('amoClient.getUrlBasename', function() {
   it('gets a basename', function() {
-    var base = amoClient.getUrlBasename('http://foo.com/bar.zip');
+    const base = amoClient.getUrlBasename('http://foo.com/bar.zip');
     expect(base).to.be.equal('bar.zip');
   });
 
   it('strips the query string', function() {
-    var base = amoClient.getUrlBasename('http://foo.com/bar.zip?baz=quz');
+    const base = amoClient.getUrlBasename('http://foo.com/bar.zip?baz=quz');
     expect(base).to.be.equal('bar.zip');
   });
 });
@@ -1063,7 +1164,7 @@ describe('amoClient.PseudoProgress', function() {
       stdout: {
         columns: 80,
         isTTY: true,
-        write: function() {},
+        write() {},
       },
     });
   });
@@ -1080,88 +1181,3 @@ describe('amoClient.PseudoProgress', function() {
     expect(this.clearIntervalMock.firstCall.args[0]).to.be.equal('interval-id');
   });
 });
-
-class MockProgress {
-  animate() {}
-  finish() {}
-}
-
-class MockRequest {
-  constructor(conf) {
-    var defaultResponse = {
-      httpResponse: { statusCode: 200 },
-      responseBody: '',
-      responseError: null,
-    };
-    conf = {
-      // By default, responses will not be queued.
-      // I.E. the same response will be returned repeatedly.
-      responseQueue: false,
-      ...conf,
-    };
-
-    this.responseQueue = conf.responseQueue;
-    this.returnMultipleResponses = !!this.responseQueue;
-
-    if (!this.returnMultipleResponses) {
-      // If the caller did not queue some responses then assume all
-      // configuration should apply to the response.
-      this.responseQueue = [conf];
-    }
-
-    // Make sure each queued response has the default values.
-    this.responseQueue.forEach((response, i) => {
-      this.responseQueue[i] = { ...defaultResponse, ...response };
-    });
-
-    this.calls = [];
-    this.callMap = {};
-    this.httpResponse = conf.httpResponse;
-    this.responseBody = conf.responseBody;
-    this.responseError = conf.responseError;
-  }
-
-  _mockRequest(method, conf, callback) {
-    var info = { conf: conf };
-    this.calls.push({ ...info, name: method });
-    this.callMap[method] = info;
-
-    var response;
-    if (this.returnMultipleResponses) {
-      response = this.responseQueue.shift();
-    } else {
-      // Always return the same response.
-      response = this.responseQueue[0];
-    }
-    if (!response) {
-      response = {};
-      response.responseError = new Error('Response queue is empty');
-    }
-
-    callback(
-      response.responseError,
-      response.httpResponse,
-      response.responseBody,
-    );
-  }
-
-  get(conf, callback) {
-    return this._mockRequest('get', conf, callback);
-  }
-
-  post(conf, callback) {
-    return this._mockRequest('post', conf, callback);
-  }
-
-  put(conf, callback) {
-    return this._mockRequest('put', conf, callback);
-  }
-
-  patch(conf, callback) {
-    return this._mockRequest('patch', conf, callback);
-  }
-
-  delete(conf, callback) {
-    return this._mockRequest('delete', conf, callback);
-  }
-}

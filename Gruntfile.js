@@ -1,4 +1,5 @@
-module.exports = function(grunt) {
+/* eslint global-require: 0 */
+module.exports = function configureGrunt(grunt) {
   // Looking for something?
   // The source of a grunt task or its configuration might be in:
   // 1. this file :)
@@ -7,9 +8,9 @@ module.exports = function(grunt) {
 
   // This loads all grunt tasks matching the grunt-*, @*/grunt-* patterns.
   require('load-grunt-tasks')(grunt);
-  var path = require('path');
+  const path = require('path');
 
-  var configs = require('load-grunt-config')(grunt, {
+  const configs = require('load-grunt-config')(grunt, {
     configPath: path.join(process.cwd(), 'tasks'),
   });
   grunt.initConfig(configs);

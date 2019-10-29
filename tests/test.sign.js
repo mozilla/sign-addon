@@ -1,5 +1,6 @@
-import { beforeEach, describe, it } from 'mocha';
 import path from 'path';
+
+import { beforeEach, describe, it } from 'mocha';
 import { expect } from 'chai';
 import sinon from 'sinon';
 
@@ -9,10 +10,10 @@ const testDir = path.resolve(__dirname);
 const fixturePath = path.join(testDir, 'fixtures');
 
 describe('sign', function() {
-  var mockProcessExit;
-  var mockProcess;
-  var signingCall;
-  var fakeClientContructor;
+  let mockProcessExit;
+  let mockProcess;
+  let signingCall;
+  let fakeClientContructor;
 
   beforeEach(function() {
     signingCall = null;
@@ -23,15 +24,17 @@ describe('sign', function() {
     fakeClientContructor = sinon.spy(() => {});
   });
 
-  function makeAMOClientStub(options) {
-    options = {
+  function makeAMOClientStub(overrides) {
+    const options = {
       errorToThrow: null,
       result: { success: true },
-      ...options,
+      ...overrides,
     };
 
     function FakeAMOClient() {
-      var constructor = fakeClientContructor;
+      const constructor = fakeClientContructor;
+      // TODO: do not use `arguments`
+      // eslint-disable-next-line prefer-rest-params
       constructor.apply(constructor, arguments);
       this.debug = function() {};
     }
@@ -50,15 +53,15 @@ describe('sign', function() {
     return FakeAMOClient;
   }
 
-  function runSignCmd(options) {
-    options = {
+  function runSignCmd(overrides) {
+    const options = {
       throwError: true,
       StubAMOClient: makeAMOClientStub(),
       cmdOptions: {},
-      ...options,
+      ...overrides,
     };
 
-    var cmdOptions = {
+    const cmdOptions = {
       apiKey: 'some-key',
       apiSecret: 'some-secret',
       id: 'some-addon@somewhere',
@@ -69,7 +72,7 @@ describe('sign', function() {
       ...options.cmdOptions,
     };
 
-    var cmdConfig = {
+    const cmdConfig = {
       systemProcess: mockProcess,
       throwError: options.throwError,
     };
@@ -192,12 +195,12 @@ describe('sign', function() {
   });
 
   it('passes custom XPI to the signer', () => {
-    let xpiPath = path.join(fixturePath, 'simple-addon.xpi');
+    const xpiPath = path.join(fixturePath, 'simple-addon.xpi');
     return runSignCmd({
       cmdOptions: {
         id: 'some-id',
         version: '0.0.1',
-        xpiPath: xpiPath,
+        xpiPath,
       },
     }).then(function() {
       expect(signingCall.called).to.be.equal(true);
@@ -235,7 +238,7 @@ describe('sign', function() {
       },
     }).then(() => {
       expect(signingCall.called).to.be.equal(true);
-      expect(signingCall.firstCall.args[0].guid).to.be.null;
+      expect(signingCall.firstCall.args[0].guid).to.be.equal(null);
     });
   });
 

@@ -1,8 +1,9 @@
-var webpack = require('webpack');
-var path = require('path');
-var fs = require('fs');
+const path = require('path');
+const fs = require('fs');
 
-var nodeModules = {};
+const webpack = require('webpack');
+
+const nodeModules = {};
 
 // This is to filter out node_modules as we don't want them
 // to be made part of any bundles.
@@ -11,7 +12,7 @@ fs.readdirSync('node_modules')
     return ['.bin'].indexOf(x) === -1;
   })
   .forEach(function(mod) {
-    nodeModules[mod] = 'commonjs ' + mod;
+    nodeModules[mod] = `commonjs ${mod}`;
   });
 
 module.exports = {

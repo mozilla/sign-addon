@@ -1,9 +1,11 @@
-import deepcopy from 'deepcopy';
-import { default as defaultFs } from 'fs';
+/* eslint max-classes-per-file: 0 */
+import defaultFs from 'fs';
 import url from 'url';
 import path from 'path';
+
+import deepcopy from 'deepcopy';
 import defaultJwt from 'jsonwebtoken';
-import { default as defaultRequest } from 'request';
+import defaultRequest from 'request';
 
 const defaultSetInterval = setInterval;
 const defaultClearInterval = clearInterval;
@@ -54,6 +56,177 @@ const defaultClearInterval = clearInterval;
  * @property {PseudoProgress=} validateProgress
  */
 
+/**
+ * A pseudo progress indicator.
+ *
+ * This is just a silly shell animation that was meant to simulate how lots of
+ * tests would be run on an add-on file. It sort of looks like a torrent file
+ * randomly getting filled in.
+ */
+export class PseudoProgress {
+  /**
+   * @typedef {object} PseudoProgressParams
+   * @property {string=} preamble
+   * @property {typeof defaultSetInterval=} setInterval
+   * @property {typeof defaultClearInterval=} clearInterval
+   * @property {typeof process.stdout=} stdout
+   */
+  constructor({
+    preamble = '',
+    setInterval = defaultSetInterval,
+    clearInterval = defaultClearInterval,
+    stdout = process.stdout,
+  } = {}) {
+    /** @type {string[]} */
+    this.bucket = [];
+    this.interval = null;
+    this.motionCounter = 1;
+
+    this.preamble = preamble;
+    this.preamble += ' [';
+    this.addendum = ']';
+    this.setInterval = setInterval;
+    this.clearInterval = clearInterval;
+    this.stdout = stdout;
+
+    let shellWidth = 80;
+    if (this.stdout.isTTY) {
+      shellWidth = Number(this.stdout.columns);
+    }
+
+    /** @type {number[]} */
+    this.emptyBucketPointers = [];
+    const bucketSize = shellWidth - this.preamble.length - this.addendum.length;
+    for (let i = 0; i < bucketSize; i++) {
+      this.bucket.push(' ');
+      this.emptyBucketPointers.push(i);
+    }
+  }
+
+  /**
+   * @typedef {object} AnimateConfig
+   * @property {number} speed
+   *
+   * @param {AnimateConfig=} animateConfig
+   */
+  animate(animateConfig) {
+    const conf = {
+      speed: 100,
+      ...animateConfig,
+    };
+    let bucketIsFull = false;
+    this.interval = this.setInterval(() => {
+      if (bucketIsFull) {
+        this.moveBucket();
+      } else {
+        bucketIsFull = this.randomlyFillBucket();
+      }
+    }, conf.speed);
+  }
+
+  finish() {
+    if (this.interval) {
+      this.clearInterval(this.interval);
+    }
+
+    this.fillBucket();
+    // The bucket has already filled to the terminal width at this point
+    // but for copy/paste purposes, add a new line:
+    this.stdout.write('\n');
+  }
+
+  randomlyFillBucket() {
+    // randomly fill a bucket (the width of the shell) with dots.
+    const randomIndex = Math.floor(
+      Math.random() * this.emptyBucketPointers.length,
+    );
+    this.bucket[this.emptyBucketPointers[randomIndex]] = '.';
+
+    this.showBucket();
+
+    let isFull = true;
+    /** @type {number[]} */
+    const newPointers = [];
+    this.emptyBucketPointers.forEach((pointer) => {
+      if (this.bucket[pointer] === ' ') {
+        isFull = false;
+        newPointers.push(pointer);
+      }
+    });
+    this.emptyBucketPointers = newPointers;
+
+    return isFull;
+  }
+
+  fillBucket() {
+    // fill the whole bucket with dots to indicate completion.
+    this.bucket = this.bucket.map(function() {
+      return '.';
+    });
+    this.showBucket();
+  }
+
+  moveBucket() {
+    // animate dots moving in a forward motion.
+    for (let i = 0; i < this.bucket.length; i++) {
+      this.bucket[i] = (i - this.motionCounter) % 3 ? ' ' : '.';
+    }
+    this.showBucket();
+
+    this.motionCounter++;
+  }
+
+  showBucket() {
+    this.stdout.write(
+      `\r${this.preamble}${this.bucket.join('')}${this.addendum}`,
+    );
+  }
+}
+
+/**
+ * Returns a nicely formatted HTTP response.
+ * This makes the response suitable for logging.
+ *
+ * @param {string|object} response - either the response's body or an object representing a JSON API response.
+ * @param {object=} overrides
+ * @returns {string}
+ */
+export function formatResponse(response, overrides = {}) {
+  const options = {
+    maxLength: 500,
+    ...overrides,
+  };
+  let prettyResponse = response;
+  const stringify = options._stringifyToJson || JSON.stringify;
+  if (typeof prettyResponse === 'object') {
+    try {
+      prettyResponse = stringify(prettyResponse);
+    } catch (e) {
+      //
+    }
+  }
+  if (typeof prettyResponse === 'string') {
+    if (prettyResponse.length > options.maxLength) {
+      prettyResponse = `${prettyResponse.substring(0, options.maxLength)}...`;
+    }
+  }
+  return prettyResponse.toString();
+}
+
+/**
+ * Returns the basename of a URL, suitable for saving to disk.
+ *
+ * @param {string} absUrl
+ * @returns {string}
+ */
+export function getUrlBasename(absUrl) {
+  // TODO: `url.parse()` might return `undefined` so we need to check that first.
+  // @ts-ignore
+  const urlPath = path.basename(url.parse(absUrl).path);
+  const parts = urlPath.split('?');
+
+  return parts[0];
+}
 /**
  * addons.mozilla.org API client.
  */
@@ -146,11 +319,9 @@ export class Client {
     let httpMethod = this.put;
     if (guid) {
       // PUT to a specific URL for this add-on + version.
-      addonUrl +=
-        encodeURIComponent(guid) +
-        '/versions/' +
-        encodeURIComponent(version) +
-        '/';
+      addonUrl += `${encodeURIComponent(guid)}/versions/${encodeURIComponent(
+        version,
+      )}/`;
       if (channel) {
         formData.channel = channel;
       }
@@ -200,18 +371,12 @@ export class Client {
             }
 
             throw new Error(
-              'Received bad response from the server while requesting ' +
-                this.absoluteURL(addonUrl) +
-                '\n\n' +
-                'status: ' +
-                httpResponse.statusCode +
-                '\n' +
-                'response: ' +
-                formatResponse(response) +
-                '\n' +
-                'headers: ' +
-                JSON.stringify(httpResponse.headers || {}) +
-                '\n',
+              `Received bad response from the server while requesting ${this.absoluteURL(
+                addonUrl,
+              )}\n\n` +
+                `status: ${httpResponse.statusCode}\n` +
+                `response: ${formatResponse(response)}\n` +
+                `headers: ${JSON.stringify(httpResponse.headers || {})}\n`,
             );
           }
 
@@ -224,27 +389,27 @@ export class Client {
    * Poll a status URL, waiting for the queued add-on to be signed.
    *
    * @param {string} statusUrl - URL to GET for add-on status
-   * @param {object=} opt - options
+   * @param {object=} options
    * @returns {Promise<SignResult>}
    */
-  waitForSignedAddon(statusUrl, opt) {
+  waitForSignedAddon(statusUrl, options) {
     /** @type {SigningStatus=} */
-    var lastStatusResponse;
+    let lastStatusResponse;
 
-    opt = {
-      clearTimeout: clearTimeout,
+    const opt = {
+      clearTimeout,
       setAbortTimeout: setTimeout,
       setStatusCheckTimeout: setTimeout,
       abortAfter: this.signedStatusCheckTimeout,
-      ...opt,
+      ...options,
     };
 
     return new Promise((resolve, reject) => {
       this._validateProgress.animate();
       /** @type {NodeJS.Timer} */
-      var statusCheckTimeout;
+      let statusCheckTimeout;
       /** @type {NodeJS.Timer} */
-      var nextStatusCheck;
+      let nextStatusCheck;
 
       const checkSignedStatus = () => {
         return this.get({ url: statusUrl }).then(
@@ -253,20 +418,20 @@ export class Client {
            */
           // eslint-disable-next-line no-unused-vars
           ([httpResponse, body]) => {
-            var data = body;
+            const data = body;
             lastStatusResponse = data;
 
             // TODO: remove this when the API has been fully deployed with this
             // change: https://github.com/mozilla/olympia/pull/1041
-            var apiReportsAutoSigning =
+            const apiReportsAutoSigning =
               typeof data.automated_signing !== 'undefined';
 
-            var canBeAutoSigned = data.automated_signing;
-            var failedValidation = !data.valid;
+            const canBeAutoSigned = data.automated_signing;
+            const failedValidation = !data.valid;
             // The add-on passed validation and all files have been created.
             // There are many checks for this state because the data will be
             // updated incrementally by the API server.
-            var signedAndReady =
+            const signedAndReady =
               data.valid &&
               data.active &&
               data.reviewed &&
@@ -274,7 +439,7 @@ export class Client {
               data.files.length > 0;
             // The add-on is valid but requires a manual review before it can
             // be signed.
-            var requiresManualReview =
+            const requiresManualReview =
               data.valid && apiReportsAutoSigning && !canBeAutoSigned;
 
             if (
@@ -291,11 +456,15 @@ export class Client {
                     'validation but could not be automatically signed ' +
                     'because this is a listed add-on.',
                 );
-                return resolve({ success: false });
-              } else if (signedAndReady) {
+
+                resolve({ success: false });
+                return;
+              }
+
+              if (signedAndReady) {
                 // TODO: show some validation warnings if there are any.
                 // We should show things like "missing update URL in install.rdf"
-                return this.downloadSignedFiles(data.files).then(
+                this.downloadSignedFiles(data.files).then(
                   /**
                    * @param {SignResult} result
                    */
@@ -306,19 +475,21 @@ export class Client {
                     });
                   },
                 );
-              } else {
-                this.logger.log(
-                  'Your add-on failed validation and could not be signed',
-                );
-                return resolve({ success: false });
+                return;
               }
-            } else {
-              // The add-on has not been fully processed yet.
-              nextStatusCheck = opt.setStatusCheckTimeout(
-                checkSignedStatus,
-                this.signedStatusCheckInterval,
+
+              this.logger.log(
+                'Your add-on failed validation and could not be signed',
               );
+
+              resolve({ success: false });
+              return;
             }
+            // The add-on has not been fully processed yet.
+            nextStatusCheck = opt.setStatusCheckTimeout(
+              checkSignedStatus,
+              this.signedStatusCheckInterval,
+            );
           },
         );
       };
@@ -330,8 +501,9 @@ export class Client {
         opt.clearTimeout(nextStatusCheck);
         reject(
           new Error(
-            'Validation took too long to complete; last status: ' +
-              formatResponse(lastStatusResponse || '[null]'),
+            `Validation took too long to complete; last status: ${formatResponse(
+              lastStatusResponse || '[null]',
+            )}`,
           ),
         );
       }, opt.abortAfter);
@@ -358,26 +530,26 @@ export class Client {
     } = {},
   ) {
     /** @type {Promise<string>[]} */
-    var allDownloads = [];
+    const allDownloads = [];
     /** @type {null | number} */
-    var dataExpected = null;
-    var dataReceived = 0;
+    let dataExpected = null;
+    let dataReceived = 0;
 
     function showProgress() {
-      var progress = '...';
+      let progress = '...';
       if (dataExpected !== null) {
-        var amount = ((dataReceived / dataExpected) * 100).toFixed();
+        const amount = ((dataReceived / dataExpected) * 100).toFixed();
         // Pad the percentage amount so that the line length is consistent.
         // This should do something like '  0%', ' 25%', '100%'
-        var padding = '';
+        let padding = '';
         try {
           padding = Array(4 - amount.length).join(' ');
         } catch (e) {
           // Ignore Invalid array length and such.
         }
-        progress = padding + amount + '% ';
+        progress = `${padding + amount}% `;
       }
-      stdout.write('\r' + 'Downloading signed files: ' + progress);
+      stdout.write(`\rDownloading signed files: ${progress}`);
     }
 
     /**
@@ -387,8 +559,8 @@ export class Client {
     const download = (fileUrl) => {
       return new Promise((resolve, reject) => {
         // The API will give us a signed file named in a sane way.
-        var fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
-        var out = createWriteStream(fileName);
+        const fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
+        const out = createWriteStream(fileName);
 
         request(
           this.configureRequest({
@@ -414,9 +586,9 @@ export class Client {
               const contentLength = response.headers['content-length'];
               if (contentLength) {
                 if (dataExpected !== null) {
-                  dataExpected += parseInt(contentLength);
+                  dataExpected += parseInt(contentLength, 10);
                 } else {
-                  dataExpected = parseInt(contentLength);
+                  dataExpected = parseInt(contentLength, 10);
                 }
               }
             },
@@ -443,7 +615,7 @@ export class Client {
     };
 
     return new Promise((resolve, reject) => {
-      var foundUnsignedFiles = false;
+      let foundUnsignedFiles = false;
       signedFiles.forEach((file) => {
         if (file.signed) {
           allDownloads.push(download(file.download_url));
@@ -478,11 +650,11 @@ export class Client {
       (downloadedFiles) => {
         this.logger.log('Downloaded:');
         downloadedFiles.forEach((fileName) => {
-          this.logger.log('    ' + fileName.replace(process.cwd(), '.'));
+          this.logger.log(`    ${fileName.replace(process.cwd(), '.')}`);
         });
         return {
           success: true,
-          downloadedFiles: downloadedFiles,
+          downloadedFiles,
         };
       },
     );
@@ -546,44 +718,55 @@ export class Client {
   /**
    * Returns a URL that is guaranteed to be absolute.
    *
-   * @param {string} url - a relative or already absolute URL
-   * @returns {string} an absolute URL, prefixed by the API prefix if necessary.
+   * @param {string} _url - a relative or already absolute URL
+   * @returns {string} url - an absolute URL, prefixed by the API prefix if necessary.
    */
-  absoluteURL(url) {
-    if (!url.match(/^http/i)) {
-      url = this.apiUrlPrefix + url;
+  absoluteURL(_url) {
+    if (!_url.match(/^http/i)) {
+      return this.apiUrlPrefix + _url;
     }
-    return url;
+
+    return _url;
   }
 
   /**
    * Configures a request with defaults such as authentication headers.
    *
-   * @param {RequestConfig} requestConf - as accepted by the `request` module
+   * @param {RequestConfig} config - as accepted by the `request` module
    * @param {{ jwt?: typeof defaultJwt}} options
    * @returns {RequestConfig}
    */
-  configureRequest(requestConf, { jwt = defaultJwt } = {}) {
-    requestConf = { ...this.requestConfig, ...requestConf };
+  configureRequest(config, { jwt = defaultJwt } = {}) {
+    const requestConf = {
+      ...this.requestConfig,
+      ...config,
+    };
+
     if (!requestConf.url) {
       throw new Error('request URL was not specified');
     }
+
+    // eslint-disable-next-line no-param-reassign
     requestConf.url = this.absoluteURL(String(requestConf.url));
+
     if (this.proxyServer) {
+      // eslint-disable-next-line no-param-reassign
       requestConf.proxy = this.proxyServer;
     }
 
-    var authToken = jwt.sign({ iss: this.apiKey }, this.apiSecret, {
+    const authToken = jwt.sign({ iss: this.apiKey }, this.apiSecret, {
       algorithm: 'HS256',
       expiresIn: this.apiJwtExpiresIn,
     });
 
     // Make sure the request won't time out before the JWT expires.
     // This may be useful for slow file uploads.
+    // eslint-disable-next-line no-param-reassign
     requestConf.timeout = this.apiJwtExpiresIn * 1000 + 500;
 
+    // eslint-disable-next-line no-param-reassign
     requestConf.headers = {
-      Authorization: 'JWT ' + authToken,
+      Authorization: `JWT ${authToken}`,
       Accept: 'application/json',
       ...requestConf.headers,
     };
@@ -600,21 +783,21 @@ export class Client {
    * match the arguments sent to the callback as specified in the `request`
    * module.
    *
-   * @param {string} method - HTTP method name.
-   * @param {RequestConfig} requestConf - options accepted by the `request` module
+   * @param {string} httpMethod - HTTP method name.
+   * @param {RequestConfig} config - options accepted by the `request` module
    * @param {RequestMethodOptions} options
    * @returns {RequestMethodReturnValue}
    */
-  request(method, requestConf, { throwOnBadResponse = true } = {}) {
-    method = method.toLowerCase();
+  request(httpMethod, config, { throwOnBadResponse = true } = {}) {
+    const method = httpMethod.toLowerCase();
+    const requestConf = this.configureRequest(config);
 
     return new Promise((resolve, reject) => {
-      requestConf = this.configureRequest(requestConf);
       this.debug(`[API] ${method.toUpperCase()} request:\n`, requestConf);
 
       // Get the caller, like request.get(), request.put() ...
       // @ts-ignore
-      var requestMethod = this._request[method].bind(this._request);
+      const requestMethod = this._request[method].bind(this._request);
       // Wrap the request callback in a promise. Here is an example without
       // promises:
       //
@@ -647,14 +830,11 @@ export class Client {
         if (throwOnBadResponse) {
           if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
             throw new Error(
-              'Received bad response from ' +
-                this.absoluteURL(String(requestConf.url)) +
-                '; ' +
-                'status: ' +
-                httpResponse.statusCode +
-                '; ' +
-                'response: ' +
-                formatResponse(body),
+              `Received bad response from ${this.absoluteURL(
+                String(requestConf.url),
+              )}; ` +
+                `status: ${httpResponse.statusCode}; ` +
+                `response: ${formatResponse(body)}`,
             );
           }
         }
@@ -665,6 +845,7 @@ export class Client {
           typeof body === 'string'
         ) {
           try {
+            // eslint-disable-next-line no-param-reassign
             body = JSON.parse(body);
           } catch (e) {
             this.logger.log('Failed to parse JSON response from server:', e);
@@ -699,196 +880,30 @@ export class Client {
       if (obj.headers) {
         ['Authorization', 'cookie', 'set-cookie'].forEach(function(hdr) {
           if (obj.headers[hdr]) {
+            // eslint-disable-next-line no-param-reassign
             obj.headers[hdr] = '<REDACTED>';
           }
         });
       }
+
       Object.keys(obj).forEach(function(key) {
+        // eslint-disable-next-line no-param-reassign
         obj[key] = redact(obj[key]);
       });
+
       return obj;
     }
 
-    var args = Array.prototype.map.call(arguments, function(val) {
-      if (typeof val === 'object') {
-        val = deepcopy(val);
-        val = redact(val);
+    // TODO: remove the use of `arguments`
+    // eslint-disable-next-line prefer-rest-params
+    const args = Array.prototype.map.call(arguments, function(val) {
+      let newVal = val;
+      if (typeof newVal === 'object') {
+        newVal = deepcopy(newVal);
+        newVal = redact(newVal);
       }
-      return val;
+      return newVal;
     });
     this.logger.log('[sign-addon]', ...args);
   }
-}
-
-/**
- * A pseudo progress indicator.
- *
- * This is just a silly shell animation that was meant to simulate how lots of
- * tests would be run on an add-on file. It sort of looks like a torrent file
- * randomly getting filled in.
- */
-export class PseudoProgress {
-  /**
-   * @typedef {object} PseudoProgressParams
-   * @property {string=} preamble
-   * @property {typeof defaultSetInterval=} setInterval
-   * @property {typeof defaultClearInterval=} clearInterval
-   * @property {typeof process.stdout=} stdout
-   */
-  constructor({
-    preamble = '',
-    setInterval = defaultSetInterval,
-    clearInterval = defaultClearInterval,
-    stdout = process.stdout,
-  } = {}) {
-    /** @type {string[]} */
-    this.bucket = [];
-    this.interval = null;
-    this.motionCounter = 1;
-
-    this.preamble = preamble;
-    this.preamble += ' [';
-    this.addendum = ']';
-    this.setInterval = setInterval;
-    this.clearInterval = clearInterval;
-    this.stdout = stdout;
-
-    var shellWidth = 80;
-    if (this.stdout.isTTY) {
-      shellWidth = Number(this.stdout.columns);
-    }
-
-    /** @type {number[]} */
-    this.emptyBucketPointers = [];
-    var bucketSize = shellWidth - this.preamble.length - this.addendum.length;
-    for (var i = 0; i < bucketSize; i++) {
-      this.bucket.push(' ');
-      this.emptyBucketPointers.push(i);
-    }
-  }
-
-  /**
-   * @typedef {object} AnimateConfig
-   * @property {number} speed
-   *
-   * @param {AnimateConfig=} conf
-   */
-  animate(conf) {
-    conf = {
-      speed: 100,
-      ...conf,
-    };
-    var bucketIsFull = false;
-    this.interval = this.setInterval(() => {
-      if (bucketIsFull) {
-        this.moveBucket();
-      } else {
-        bucketIsFull = this.randomlyFillBucket();
-      }
-    }, conf.speed);
-  }
-
-  finish() {
-    if (this.interval) {
-      this.clearInterval(this.interval);
-    }
-
-    this.fillBucket();
-    // The bucket has already filled to the terminal width at this point
-    // but for copy/paste purposes, add a new line:
-    this.stdout.write('\n');
-  }
-
-  randomlyFillBucket() {
-    // randomly fill a bucket (the width of the shell) with dots.
-    var randomIndex = Math.floor(
-      Math.random() * this.emptyBucketPointers.length,
-    );
-    var pointer = this.emptyBucketPointers[randomIndex];
-    this.bucket[pointer] = '.';
-
-    this.showBucket();
-
-    var isFull = true;
-    /** @type {number[]} */
-    var newPointers = [];
-    this.emptyBucketPointers.forEach((pointer) => {
-      if (this.bucket[pointer] === ' ') {
-        isFull = false;
-        newPointers.push(pointer);
-      }
-    });
-    this.emptyBucketPointers = newPointers;
-
-    return isFull;
-  }
-
-  fillBucket() {
-    // fill the whole bucket with dots to indicate completion.
-    this.bucket = this.bucket.map(function() {
-      return '.';
-    });
-    this.showBucket();
-  }
-
-  moveBucket() {
-    // animate dots moving in a forward motion.
-    for (var i = 0; i < this.bucket.length; i++) {
-      this.bucket[i] = (i - this.motionCounter) % 3 ? ' ' : '.';
-    }
-    this.showBucket();
-
-    this.motionCounter++;
-  }
-
-  showBucket() {
-    this.stdout.write(
-      '\r' + this.preamble + this.bucket.join('') + this.addendum,
-    );
-  }
-}
-
-/**
- * Returns a nicely formatted HTTP response.
- * This makes the response suitable for logging.
- *
- * @param {string|object} response - either the response's body or an object representing a JSON API response.
- * @param {object=} options
- * @returns {string}
- */
-export function formatResponse(response, options = {}) {
-  options = {
-    maxLength: 500,
-    ...options,
-  };
-  var prettyResponse = response;
-  var stringify = options._stringifyToJson || JSON.stringify;
-  if (typeof prettyResponse === 'object') {
-    try {
-      prettyResponse = stringify(prettyResponse);
-    } catch (e) {
-      //
-    }
-  }
-  if (typeof prettyResponse === 'string') {
-    if (prettyResponse.length > options.maxLength) {
-      prettyResponse = prettyResponse.substring(0, options.maxLength) + '...';
-    }
-  }
-  return prettyResponse.toString();
-}
-
-/**
- * Returns the basename of a URL, suitable for saving to disk.
- *
- * @param {string} absUrl
- * @returns {string}
- */
-export function getUrlBasename(absUrl) {
-  // TODO: `url.parse()` might return `undefined` so we need to check that first.
-  // @ts-ignore
-  const urlPath = path.basename(url.parse(absUrl).path);
-  const parts = urlPath.split('?');
-
-  return parts[0];
 }

@@ -94,7 +94,7 @@ export default function signAddon({
       }
     })
     .then(() => {
-      let client = new AMOClient({
+      const client = new AMOClient({
         apiKey,
         apiSecret,
         apiUrlPrefix,
@@ -107,10 +107,10 @@ export default function signAddon({
       });
 
       return client.sign({
-        xpiPath: xpiPath,
+        xpiPath,
         guid: id,
-        version: version,
-        channel: channel,
+        version,
+        channel,
       });
     });
 }
