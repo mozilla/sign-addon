@@ -13,6 +13,10 @@ const defaultClearInterval = clearInterval;
 /** @typedef {import("request").Response} Response */
 
 /**
+ * @typedef {"listed" | "unlisted"} ReleaseChannel
+ */
+
+/**
  * See: https://addons-server.readthedocs.io/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
  *
  * @typedef {{
@@ -74,6 +78,10 @@ export class Client {
    */
 
   /**
+   * @typedef {{ success: boolean, downloadedFiles?: string[], id?: string }} SignResult
+   */
+
+  /**
    * @param {ClientParams} params
    */
   constructor({apiKey,
@@ -119,10 +127,8 @@ export class Client {
    * @typedef {object} SignParams
    * @property {string=} guid - optional add-on GUID (ID in install.rdf)
    * @property {string} version - add-on version string
-   * @property {"listed" | "unlisted"} channel - release channel (listed or unlisted)
+   * @property {ReleaseChannel} channel - release channel (listed or unlisted)
    * @property {string} xpiPath - path to xpi file
-   *
-   * @typedef {{ success: boolean, downloadedFiles?: string[], id?: string }} SignResult
    *
    * @param {SignParams} signParams
    * @returns {Promise<SignResult>}
@@ -162,7 +168,8 @@ export class Client {
     }).then(
       /**
        * @param {[Response, object]} requestValue
-       */
+       * @returns {Promise<SignResult>} result
+      */
       ([httpResponse, body]) => {
         const response = body || {};
 
@@ -173,7 +180,7 @@ export class Client {
           if (response.error) {
             this.logger.error(`Server response: ${response.error}`,
               `(status: ${httpResponse.statusCode})`);
-            return {success: false};
+            return Promise.resolve({success: false});
           }
 
           throw new Error(

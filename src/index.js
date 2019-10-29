@@ -6,6 +6,7 @@ import {Client as DefaultAMOClient} from "./amo-client";
 
 /** @typedef {import("request").OptionsWithUrl} RequestConfig */
 /** @typedef {import("./amo-client").ClientParams} ClientParams */
+/** @typedef {import("./amo-client").ReleaseChannel} ReleaseChannel */
 
 /**
  * @typedef {object} SignAddonParams
@@ -17,7 +18,7 @@ import {Client as DefaultAMOClient} from "./amo-client";
  * @property {ClientParams['apiUrlPrefix']=} apiUrlPrefix
  * @property {ClientParams['apiJwtExpiresIn']} apiJwtExpiresIn
  * @property {ClientParams['debugLogging']=} verbose
- * @property {"listed" | "unlisted"} channel
+ * @property {ReleaseChannel} channel
  * @property {ClientParams['signedStatusCheckTimeout']=} timeout
  * @property {ClientParams['downloadDir']} downloadDir
  * @property {ClientParams['proxyServer']=} apiProxy
