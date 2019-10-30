@@ -1,8 +1,3 @@
 {
-  "presets": ["@babel/preset-env"],
-  "plugins": [
-    "@babel/transform-flow-strip-types",
-    "@babel/proposal-class-properties",
-    "@babel/transform-modules-commonjs",
-  ]
+  "presets": ["@babel/preset-env"]
 }

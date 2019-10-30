@@ -103,8 +103,10 @@ Here are some notes about dealing with IDs when using `signAddon()`:
 
 Here's how to set up a development environment for the `sign-addon` package. Install all requirements and run tests from the source:
 
-    npm install
-    npm start
+```
+$ npm install
+$ npm test
+```
 
 ### Prettier
 
@@ -114,13 +116,35 @@ We use [Prettier][] to automatically format our JavaScript code and stop all the
 
 In the project directory, you can run the following commands. There are a few commands not mentioned here (see `package.json`) but those are only used by internal processes.
 
-##### `npm run prettier`
+#### `npm run build`
+
+This packages the library for production into the `dist/` folder.
+
+#### `npm run eslint`
+
+This runs [ESLint][] to discover problems within our codebase without executing it. ESLint also enforces some patterns and practices.
+
+#### `npm run lint`
+
+This runs all the _lint_ commands at once.
+
+#### `npm run prettier`
 
 This runs [Prettier][] to automatically format the entire codebase.
 
-##### `npm run prettier-dev`
+#### `npm run prettier-dev`
 
 This runs [Prettier][] on only your changed files. This is intended for development.
+
+#### `npm test`
+
+This runs the test suite.
+
+You can run this command in "watch mode" while working on this project:
+
+```
+$ npm test -- --watch
+```
 
 #### `npm run typecheck`
 
@@ -180,5 +204,6 @@ To create a new release, do the following:
 - Create a [new release](https://github.com/mozilla/sign-addon/releases/new) and paste in the changelog Markdown. It may require some manual editing. For example, some commit messages might have been truncated. Title the github release after the new version you just added in the previous commit to `package.json` (example: `1.0.4`).
 - When you publish the release, github creates a tag. When TravisCI builds the tag, it will automatically publish the package to [npm](https://www.npmjs.com/package/sign-addon).
 
-[typescript]: https://www.typescriptlang.org/
+[eslint]: https://eslint.org/
 [prettier]: https://prettier.io/
+[typescript]: https://www.typescriptlang.org/
