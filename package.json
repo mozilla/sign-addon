@@ -59,7 +59,7 @@
     "pretty-quick": "2.0.0",
     "sinon": "7.5.0",
     "typescript": "3.6.4",
-    "webpack": "4.41.0",
+    "webpack": "4.41.2",
     "webpack-dev-server": "3.8.1"
   },
   "repository": {
