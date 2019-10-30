@@ -1,6 +1,6 @@
-var path = require('path');
-var webpackConfig = require('../webpack.config.js');
+const path = require('path');
 
+const webpackConfig = require('../webpack.config.js');
 
 module.exports = {
   options: webpackConfig,

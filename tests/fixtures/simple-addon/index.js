@@ -1,1 +1,2 @@
-console.log("Simple addon");
+// eslint-disable-next-line no-console
+console.log('Simple addon');

@@ -1,8 +1,9 @@
-var webpack = require('webpack');
-var path = require('path');
-var fs = require('fs');
+const path = require('path');
+const fs = require('fs');
 
-var nodeModules = {};
+const webpack = require('webpack');
+
+const nodeModules = {};
 
 // This is to filter out node_modules as we don't want them
 // to be made part of any bundles.
@@ -11,7 +12,7 @@ fs.readdirSync('node_modules')
     return ['.bin'].indexOf(x) === -1;
   })
   .forEach(function(mod) {
-    nodeModules[mod] = 'commonjs ' + mod;
+    nodeModules[mod] = `commonjs ${mod}`;
   });
 
 module.exports = {
@@ -27,33 +28,32 @@ module.exports = {
     libraryTarget: 'commonjs2',
   },
   module: {
-    rules: [{
-      test: /\.js$/,
-      use: {
-        // babel options are in .babelrc
-        loader: 'babel-loader',
+    rules: [
+      {
+        test: /\.js$/,
+        use: {
+          // babel options are in .babelrc
+          loader: 'babel-loader',
+        },
+        exclude: /(node_modules|bower_components)/,
       },
-      exclude: /(node_modules|bower_components)/,
-    }],
+    ],
   },
   externals: nodeModules,
   plugins: [
     // for when: https://github.com/webpack/webpack/issues/353
     new webpack.IgnorePlugin({
-      resourceRegExp: /vertx/
+      resourceRegExp: /vertx/,
     }),
     new webpack.BannerPlugin({
       banner: 'require("source-map-support").install();',
       raw: true,
-      entryOnly: false
+      entryOnly: false,
     }),
   ],
   resolve: {
     extensions: ['.js', '.json'],
-    modules: [
-      'src',
-      'node_modules',
-    ],
+    modules: ['src', 'node_modules'],
   },
   devtool: 'sourcemap',
 };
