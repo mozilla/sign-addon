@@ -10,53 +10,75 @@ const testDir = path.resolve(__dirname);
 const fixturePath = path.join(testDir, 'fixtures');
 
 describe('sign', function() {
+  /** @type {sinon.SinonSpy} */
   let mockProcessExit;
+  /** @type {typeof process} */
   let mockProcess;
+  /** @type {sinon.SinonSpy} */
   let signingCall;
+  /** @type {sinon.SinonSpy} */
   let fakeClientContructor;
 
   beforeEach(function() {
-    signingCall = null;
     mockProcessExit = sinon.spy(() => {});
     mockProcess = {
+      ...process,
+      // `mockProcessExit` is not compatible with the type of `process.exit()`
+      // because we are using a mock.
+      // @ts-ignore
       exit: mockProcessExit,
     };
     fakeClientContructor = sinon.spy(() => {});
   });
 
-  function makeAMOClientStub(overrides) {
+  /**
+   * @returns {typeof import('../src/amo-client').Client}
+   */
+  function makeAMOClientStub(overrides = {}) {
     const options = {
       errorToThrow: null,
       result: { success: true },
       ...overrides,
     };
 
-    function FakeAMOClient() {
+    function AMOClientStub() {
       const constructor = fakeClientContructor;
       // TODO: do not use `arguments`
+      // @ts-ignore
       // eslint-disable-next-line prefer-rest-params
       constructor.apply(constructor, arguments);
-      this.debug = function() {};
+
+      // `this` is not typed.
+      // @ts-ignore
+      this.debug = sinon.stub();
+
+      signingCall = sinon.spy(
+        () =>
+          new Promise((resolve) => {
+            if (options.errorToThrow) {
+              throw options.errorToThrow;
+            }
+            resolve(options.result);
+          }),
+      );
+
+      // `this` is not typed.
+      // @ts-ignore
+      this.sign = signingCall;
     }
 
-    signingCall = sinon.spy(
-      () =>
-        new Promise((resolve) => {
-          if (options.errorToThrow) {
-            throw options.errorToThrow;
-          }
-          resolve(options.result);
-        }),
-    );
-    FakeAMOClient.prototype.sign = signingCall;
-
-    return FakeAMOClient;
+    // TODO: make AMOClientStub fully compatible with the Client type.
+    // @ts-ignore
+    return AMOClientStub;
   }
 
-  function runSignCmd(overrides) {
+  /**
+   * @returns {Promise<void>}
+   */
+  function runSignCmd(overrides = {}) {
     const options = {
       throwError: true,
-      StubAMOClient: makeAMOClientStub(),
+      AMOClientStub: makeAMOClientStub(),
       cmdOptions: {},
       ...overrides,
     };
@@ -68,7 +90,7 @@ describe('sign', function() {
       xpiPath: path.join(fixturePath, 'simple-addon.xpi'),
       version: '0.0.1',
       verbose: false,
-      AMOClient: options.StubAMOClient,
+      AMOClient: options.AMOClientStub,
       ...options.cmdOptions,
     };
 
@@ -211,7 +233,7 @@ describe('sign', function() {
   it('should exit 1 on signing failure', () => {
     return runSignCmd({
       throwError: false,
-      StubAMOClient: makeAMOClientStub({
+      AMOClientStub: makeAMOClientStub({
         result: { success: false },
       }),
     }).then(function() {
@@ -221,7 +243,7 @@ describe('sign', function() {
 
   it('should exit 1 on exception', () => {
     return runSignCmd({
-      StubAMOClient: makeAMOClientStub({
+      AMOClientStub: makeAMOClientStub({
         errorToThrow: new Error('some signing error'),
       }),
       throwError: false,
