@@ -718,15 +718,15 @@ export class Client {
   /**
    * Returns a URL that is guaranteed to be absolute.
    *
-   * @param {string} _url - a relative or already absolute URL
+   * @param {string} urlString - a relative or already absolute URL
    * @returns {string} url - an absolute URL, prefixed by the API prefix if necessary.
    */
-  absoluteURL(_url) {
-    if (!_url.match(/^http/i)) {
-      return this.apiUrlPrefix + _url;
+  absoluteURL(urlString) {
+    if (!urlString.match(/^http/i)) {
+      return this.apiUrlPrefix + urlString;
     }
 
-    return _url;
+    return urlString;
   }
 
   /**
