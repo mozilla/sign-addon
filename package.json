@@ -27,11 +27,11 @@
     "stream-to-promise": "2.2.0"
   },
   "devDependencies": {
-    "@babel/core": "7.6.2",
+    "@babel/core": "7.6.4",
     "@babel/plugin-proposal-class-properties": "7.5.5",
-    "@babel/plugin-transform-flow-strip-types": "7.4.4",
+    "@babel/plugin-transform-flow-strip-types": "7.6.3",
     "@babel/plugin-transform-modules-commonjs": "7.6.0",
-    "@babel/preset-env": "7.6.2",
+    "@babel/preset-env": "7.6.3",
     "@commitlint/cli": "8.2.0",
     "@commitlint/config-conventional": "8.2.0",
     "@types/jsonwebtoken": "8.3.5",
