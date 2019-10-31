@@ -6,9 +6,9 @@ import path from 'path';
 import deepcopy from 'deepcopy';
 import defaultJwt from 'jsonwebtoken';
 import defaultRequest from 'request';
+import { oneLine } from 'common-tags';
 
-const defaultSetInterval = setInterval;
-const defaultClearInterval = clearInterval;
+import PseudoProgress from './PseudoProgress';
 
 /** @typedef {import("request").OptionsWithUrl} RequestConfig */
 
@@ -55,133 +55,6 @@ const defaultClearInterval = clearInterval;
  * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
  * @property {PseudoProgress=} validateProgress
  */
-
-/**
- * A pseudo progress indicator.
- *
- * This is just a silly shell animation that was meant to simulate how lots of
- * tests would be run on an add-on file. It sort of looks like a torrent file
- * randomly getting filled in.
- */
-export class PseudoProgress {
-  /**
-   * @typedef {object} PseudoProgressParams
-   * @property {string=} preamble
-   * @property {typeof defaultSetInterval=} setInterval
-   * @property {typeof defaultClearInterval=} clearInterval
-   * @property {typeof process.stdout=} stdout
-   */
-  constructor({
-    preamble = '',
-    setInterval = defaultSetInterval,
-    clearInterval = defaultClearInterval,
-    stdout = process.stdout,
-  } = {}) {
-    /** @type {string[]} */
-    this.bucket = [];
-    this.interval = null;
-    this.motionCounter = 1;
-
-    this.preamble = preamble;
-    this.preamble += ' [';
-    this.addendum = ']';
-    this.setInterval = setInterval;
-    this.clearInterval = clearInterval;
-    this.stdout = stdout;
-
-    let shellWidth = 80;
-    if (this.stdout.isTTY) {
-      shellWidth = Number(this.stdout.columns);
-    }
-
-    /** @type {number[]} */
-    this.emptyBucketPointers = [];
-    const bucketSize = shellWidth - this.preamble.length - this.addendum.length;
-    for (let i = 0; i < bucketSize; i++) {
-      this.bucket.push(' ');
-      this.emptyBucketPointers.push(i);
-    }
-  }
-
-  /**
-   * @typedef {object} AnimateConfig
-   * @property {number} speed
-   *
-   * @param {AnimateConfig=} animateConfig
-   */
-  animate(animateConfig) {
-    const conf = {
-      speed: 100,
-      ...animateConfig,
-    };
-    let bucketIsFull = false;
-    this.interval = this.setInterval(() => {
-      if (bucketIsFull) {
-        this.moveBucket();
-      } else {
-        bucketIsFull = this.randomlyFillBucket();
-      }
-    }, conf.speed);
-  }
-
-  finish() {
-    if (this.interval) {
-      this.clearInterval(this.interval);
-    }
-
-    this.fillBucket();
-    // The bucket has already filled to the terminal width at this point
-    // but for copy/paste purposes, add a new line:
-    this.stdout.write('\n');
-  }
-
-  randomlyFillBucket() {
-    // randomly fill a bucket (the width of the shell) with dots.
-    const randomIndex = Math.floor(
-      Math.random() * this.emptyBucketPointers.length,
-    );
-    this.bucket[this.emptyBucketPointers[randomIndex]] = '.';
-
-    this.showBucket();
-
-    let isFull = true;
-    /** @type {number[]} */
-    const newPointers = [];
-    this.emptyBucketPointers.forEach((pointer) => {
-      if (this.bucket[pointer] === ' ') {
-        isFull = false;
-        newPointers.push(pointer);
-      }
-    });
-    this.emptyBucketPointers = newPointers;
-
-    return isFull;
-  }
-
-  fillBucket() {
-    // fill the whole bucket with dots to indicate completion.
-    this.bucket = this.bucket.map(function() {
-      return '.';
-    });
-    this.showBucket();
-  }
-
-  moveBucket() {
-    // animate dots moving in a forward motion.
-    for (let i = 0; i < this.bucket.length; i++) {
-      this.bucket[i] = (i - this.motionCounter) % 3 ? ' ' : '.';
-    }
-    this.showBucket();
-
-    this.motionCounter++;
-  }
-
-  showBucket() {
-    this.stdout.write(
-      `\r${this.preamble}${this.bucket.join('')}${this.addendum}`,
-    );
-  }
-}
 
 /**
  * Returns a nicely formatted HTTP response.
@@ -388,117 +261,110 @@ export class Client {
   /**
    * Poll a status URL, waiting for the queued add-on to be signed.
    *
+   * @typedef {object} WaitForSignedAddonParams
+   * @property {typeof clearTimeout=} _clearTimeout
+   * @property {typeof setTimeout=} _setAbortTimeout
+   * @property {typeof setTimeout=} _setStatusCheckTimeout
+   * @property {number=} abortAfter
+   *
    * @param {string} statusUrl - URL to GET for add-on status
-   * @param {object=} options
+   * @param {WaitForSignedAddonParams} options
    * @returns {Promise<SignResult>}
    */
-  waitForSignedAddon(statusUrl, options) {
+  waitForSignedAddon(
+    statusUrl,
+    {
+      _clearTimeout = clearTimeout,
+      _setAbortTimeout = setTimeout,
+      _setStatusCheckTimeout = setTimeout,
+      abortAfter = this.signedStatusCheckTimeout,
+    } = {},
+  ) {
     /** @type {SigningStatus=} */
     let lastStatusResponse;
 
-    const opt = {
-      clearTimeout,
-      setAbortTimeout: setTimeout,
-      setStatusCheckTimeout: setTimeout,
-      abortAfter: this.signedStatusCheckTimeout,
-      ...options,
-    };
-
     return new Promise((resolve, reject) => {
-      this._validateProgress.animate();
+      /** @type {NodeJS.Timer} */
+      let abortTimeout;
       /** @type {NodeJS.Timer} */
       let statusCheckTimeout;
-      /** @type {NodeJS.Timer} */
-      let nextStatusCheck;
 
-      const checkSignedStatus = () => {
-        return this.get({ url: statusUrl }).then(
-          /**
-           * @param {[Response, SigningStatus]} promise params
-           */
+      const checkSignedStatus = async () => {
+        try {
           // eslint-disable-next-line no-unused-vars
-          ([httpResponse, body]) => {
-            const data = body;
-            lastStatusResponse = data;
+          const [httpResponse, data] = await this.get({ url: statusUrl });
+          lastStatusResponse = data;
 
-            // TODO: remove this when the API has been fully deployed with this
-            // change: https://github.com/mozilla/olympia/pull/1041
-            const apiReportsAutoSigning =
-              typeof data.automated_signing !== 'undefined';
+          // TODO: remove this when the API has been fully deployed with this
+          // change: https://github.com/mozilla/olympia/pull/1041
+          const apiReportsAutoSigning =
+            typeof data.automated_signing !== 'undefined';
 
-            const canBeAutoSigned = data.automated_signing;
-            const failedValidation = !data.valid;
-            // The add-on passed validation and all files have been created.
-            // There are many checks for this state because the data will be
-            // updated incrementally by the API server.
-            const signedAndReady =
-              data.valid &&
-              data.active &&
-              data.reviewed &&
-              data.files &&
-              data.files.length > 0;
-            // The add-on is valid but requires a manual review before it can
-            // be signed.
-            const requiresManualReview =
-              data.valid && apiReportsAutoSigning && !canBeAutoSigned;
+          const canBeAutoSigned = data.automated_signing;
+          const failedValidation = !data.valid;
+          // The add-on passed validation and all files have been created. There
+          // are many checks for this state because the data will be updated
+          // incrementally by the API server.
+          const signedAndReady =
+            data.valid &&
+            data.active &&
+            data.reviewed &&
+            data.files &&
+            data.files.length > 0;
+          // The add-on is valid but requires a manual review before it can
+          // be signed.
+          const requiresManualReview =
+            data.valid && apiReportsAutoSigning && !canBeAutoSigned;
 
-            if (
-              data.processed &&
-              (failedValidation || signedAndReady || requiresManualReview)
-            ) {
-              this._validateProgress.finish();
-              opt.clearTimeout(statusCheckTimeout);
-              this.logger.log('Validation results:', data.validation_url);
+          if (
+            data.processed &&
+            (failedValidation || signedAndReady || requiresManualReview)
+          ) {
+            this._validateProgress.finish();
+            _clearTimeout(abortTimeout);
+            this.logger.log('Validation results:', data.validation_url);
 
-              if (requiresManualReview) {
-                this.logger.log(
-                  'Your add-on has been submitted for review. It passed ' +
-                    'validation but could not be automatically signed ' +
-                    'because this is a listed add-on.',
-                );
-
-                resolve({ success: false });
-                return;
-              }
-
-              if (signedAndReady) {
-                // TODO: show some validation warnings if there are any.
-                // We should show things like "missing update URL in install.rdf"
-                this.downloadSignedFiles(data.files).then(
-                  /**
-                   * @param {SignResult} result
-                   */
-                  (result) => {
-                    resolve({
-                      id: data.guid,
-                      ...result,
-                    });
-                  },
-                );
-                return;
-              }
-
+            if (requiresManualReview) {
               this.logger.log(
-                'Your add-on failed validation and could not be signed',
+                'Your add-on has been submitted for review. It passed ' +
+                  'validation but could not be automatically signed ' +
+                  'because this is a listed add-on.',
               );
 
               resolve({ success: false });
               return;
             }
-            // The add-on has not been fully processed yet.
-            nextStatusCheck = opt.setStatusCheckTimeout(
-              checkSignedStatus,
-              this.signedStatusCheckInterval,
+
+            if (signedAndReady) {
+              // TODO: show some validation warnings if there are any.
+              // We should show things like "missing update URL in manifest"
+              const result = await this.downloadSignedFiles(data.files);
+
+              resolve({ id: data.guid, ...result });
+              return;
+            }
+
+            this.logger.log(
+              'Your add-on failed validation and could not be signed',
             );
-          },
-        );
+
+            resolve({ success: false });
+            return;
+          }
+          // The add-on has not been fully processed yet.
+          statusCheckTimeout = _setStatusCheckTimeout(
+            checkSignedStatus,
+            this.signedStatusCheckInterval,
+          );
+        } catch (err) {
+          reject(err);
+        }
       };
 
-      checkSignedStatus().catch(reject);
-
-      statusCheckTimeout = opt.setAbortTimeout(() => {
+      abortTimeout = _setAbortTimeout(() => {
         this._validateProgress.finish();
-        opt.clearTimeout(nextStatusCheck);
+        _clearTimeout(statusCheckTimeout);
+
         reject(
           new Error(
             `Validation took too long to complete; last status: ${formatResponse(
@@ -506,7 +372,11 @@ export class Client {
             )}`,
           ),
         );
-      }, opt.abortAfter);
+      }, abortAfter);
+
+      // Start checking the status.
+      this._validateProgress.animate();
+      checkSignedStatus();
     });
   }
 
@@ -521,7 +391,7 @@ export class Client {
    * }} options
    * @returns {Promise<SignResult>}
    */
-  downloadSignedFiles(
+  async downloadSignedFiles(
     signedFiles,
     {
       createWriteStream = defaultFs.createWriteStream,
@@ -614,50 +484,39 @@ export class Client {
       });
     };
 
-    return new Promise((resolve, reject) => {
-      let foundUnsignedFiles = false;
-      signedFiles.forEach((file) => {
-        if (file.signed) {
-          allDownloads.push(download(file.download_url));
-        } else {
-          this.debug('This file was not signed:', file);
-          foundUnsignedFiles = true;
-        }
-      });
-
-      if (allDownloads.length) {
-        if (foundUnsignedFiles) {
-          this.logger.log(
-            'Some files were not signed. Re-run with --verbose for details.',
-          );
-        }
-        showProgress();
-        resolve(Promise.all(allDownloads));
+    let foundUnsignedFiles = false;
+    signedFiles.forEach((file) => {
+      if (file.signed) {
+        allDownloads.push(download(file.download_url));
       } else {
-        reject(
-          new Error(
-            'The XPI was processed but no signed files were found. Check ' +
-              'your manifest and make sure it targets Firefox as an ' +
-              'application.',
-          ),
-        );
+        this.debug('This file was not signed:', file);
+
+        foundUnsignedFiles = true;
       }
-    }).then(
-      /**
-       * @param {string[]} downloadedFiles
-       * @returns {SignResult}
-       */
-      (downloadedFiles) => {
-        this.logger.log('Downloaded:');
-        downloadedFiles.forEach((fileName) => {
-          this.logger.log(`    ${fileName.replace(process.cwd(), '.')}`);
-        });
-        return {
-          success: true,
-          downloadedFiles,
-        };
-      },
-    );
+    });
+
+    let downloadedFiles;
+    if (allDownloads.length) {
+      if (foundUnsignedFiles) {
+        this.logger.log(oneLine`Some files were not signed. Re-run with
+        --verbose for details.`);
+      }
+
+      showProgress();
+
+      downloadedFiles = await Promise.all(allDownloads);
+    } else {
+      throw new Error(oneLine`The XPI was processed but no signed files were
+      found. Check your manifest and make sure it targets Firefox as an
+      application.`);
+    }
+
+    this.logger.log('Downloaded:');
+    downloadedFiles.forEach((fileName) => {
+      this.logger.log(`    ${fileName.replace(process.cwd(), '.')}`);
+    });
+
+    return { success: true, downloadedFiles };
   }
 
   /**
@@ -788,11 +647,15 @@ export class Client {
    * @param {RequestMethodOptions} options
    * @returns {RequestMethodReturnValue}
    */
-  request(httpMethod, config, { throwOnBadResponse = true } = {}) {
+  async request(httpMethod, config, { throwOnBadResponse = true } = {}) {
     const method = httpMethod.toLowerCase();
     const requestConf = this.configureRequest(config);
 
-    return new Promise((resolve, reject) => {
+    let [
+      // eslint-disable-next-line prefer-const
+      httpResponse,
+      body,
+    ] = await new Promise((resolve, reject) => {
       this.debug(`[API] ${method.toUpperCase()} request:\n`, requestConf);
 
       // Get the caller, like request.get(), request.put() ...
@@ -804,62 +667,56 @@ export class Client {
       // request.put(requestConf, function(err, httpResponse, body) {
       //   // promise gets resolved here
       // })
-      //
       requestMethod(
         /** @type RequestConfig */
         requestConf,
         /**
          * @param {Error} error
-         * @param {Response} httpResponse
-         * @param {string} body
+         * @param {Response} response
+         * @param {string} responseBody
          */
-        (error, httpResponse, body) => {
+        (error, response, responseBody) => {
           if (error) {
             reject(error);
             return;
           }
 
-          resolve([httpResponse, body]);
+          resolve([response, responseBody]);
         },
       );
-    }).then(
-      /**
-       * @param {[Response, string]} promise params
-       */
-      ([httpResponse, body]) => {
-        if (throwOnBadResponse) {
-          if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
-            throw new Error(
-              `Received bad response from ${this.absoluteURL(
-                String(requestConf.url),
-              )}; ` +
-                `status: ${httpResponse.statusCode}; ` +
-                `response: ${formatResponse(body)}`,
-            );
-          }
-        }
+    });
 
-        if (
-          httpResponse.headers &&
-          httpResponse.headers['content-type'] === 'application/json' &&
-          typeof body === 'string'
-        ) {
-          try {
-            // eslint-disable-next-line no-param-reassign
-            body = JSON.parse(body);
-          } catch (e) {
-            this.logger.log('Failed to parse JSON response from server:', e);
-          }
-        }
-        this.debug(
-          `[API] ${method.toUpperCase()} response:\n`,
-          `Status: ${httpResponse.statusCode}\n`,
-          { headers: httpResponse.headers, response: body },
+    if (throwOnBadResponse) {
+      if (httpResponse.statusCode > 299 || httpResponse.statusCode < 200) {
+        throw new Error(
+          `Received bad response from ${this.absoluteURL(
+            String(requestConf.url),
+          )}; ` +
+            `status: ${httpResponse.statusCode}; ` +
+            `response: ${formatResponse(body)}`,
         );
+      }
+    }
 
-        return [httpResponse, body];
-      },
+    if (
+      httpResponse.headers &&
+      httpResponse.headers['content-type'] === 'application/json' &&
+      typeof body === 'string'
+    ) {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        this.logger.log('Failed to parse JSON response from server:', e);
+      }
+    }
+
+    this.debug(
+      `[API] ${method.toUpperCase()} response:\n`,
+      `Status: ${httpResponse.statusCode}\n`,
+      { headers: httpResponse.headers, response: body },
     );
+
+    return [httpResponse, body];
   }
 
   /**

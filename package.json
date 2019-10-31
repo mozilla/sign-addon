@@ -12,11 +12,12 @@
     "prettier": "prettier --write '**'",
     "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `yarn prettier-dev` before committing\n\n' && exit 1)",
     "prettier-dev": "pretty-quick --branch master",
-    "test": "mocha --require @babel/register --reporter=spec tests/",
+    "test": "mocha --require @babel/register --reporter=spec --exit tests/",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "core-js": "3.3.6",
+    "common-tags": "1.8.0",
     "deepcopy": "2.0.0",
     "es6-error": "4.1.1",
     "es6-promisify": "6.0.2",
@@ -33,6 +34,7 @@
     "@commitlint/cli": "8.2.0",
     "@commitlint/config-conventional": "8.2.0",
     "@types/chai": "4.2.4",
+    "@types/common-tags": "1.8.0",
     "@types/jsonwebtoken": "8.3.5",
     "@types/mocha": "5.2.7",
     "@types/mz": "0.0.32",

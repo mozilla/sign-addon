@@ -481,12 +481,12 @@ describe('amoClient.Client', function() {
     });
 
     it('aborts validation check after timeout', function() {
-      const clearTimeout = sinon.spy(() => {});
+      const _clearTimeout = sinon.stub();
 
       return this.client
         .waitForSignedAddon('/status-url', {
-          clearTimeout,
-          setStatusCheckTimeout() {
+          _clearTimeout,
+          _setStatusCheckTimeout() {
             return 'status-check-timeout-id';
           },
           abortAfter: 0,
@@ -496,14 +496,14 @@ describe('amoClient.Client', function() {
         })
         .catch(function(err) {
           expect(err.message).to.include('took too long');
-          expect(clearTimeout.firstCall.args[0]).to.be.equal(
+          expect(_clearTimeout.firstCall.args[0]).to.be.equal(
             'status-check-timeout-id',
           );
         });
     });
 
     it('can configure signing status check timeout', function() {
-      const clearTimeout = sinon.stub();
+      const _clearTimeout = sinon.stub();
       const client = this.newClient({
         // This should cause an immediate timeout.
         signedStatusCheckTimeout: 0,
@@ -511,8 +511,8 @@ describe('amoClient.Client', function() {
 
       return client
         .waitForSignedAddon('/status-url', {
-          clearTimeout,
-          setStatusCheckTimeout() {
+          _clearTimeout,
+          _setStatusCheckTimeout() {
             return 'status-check-timeout-id';
           },
         })
@@ -545,7 +545,7 @@ describe('amoClient.Client', function() {
     });
 
     it('clears abort timeout after resolution', function() {
-      const clearTimeout = sinon.spy(() => {});
+      const _clearTimeout = sinon.stub();
       this.client._request = new MockRequest({
         responseQueue: [signedResponse()],
       });
@@ -554,18 +554,18 @@ describe('amoClient.Client', function() {
       this.client.downloadSignedFiles = downloadSignedFiles;
 
       return this.waitForSignedAddon('/status-url/', {
-        clearTimeout,
-        setAbortTimeout() {
+        _clearTimeout,
+        _setAbortTimeout() {
           return 'abort-timeout-id';
         },
-        setStatusCheckTimeout() {
+        _setStatusCheckTimeout() {
           return 'status-check-timeout-id';
         },
       }).then(function() {
         // Assert that signing resolved successfully.
         expect(downloadSignedFiles.called).to.be.equal(true);
         // Assert that the timeout-to-abort was cleared.
-        expect(clearTimeout.firstCall.args[0]).to.be.equal('abort-timeout-id');
+        expect(_clearTimeout.firstCall.args[0]).to.be.equal('abort-timeout-id');
       });
     });
 
@@ -1151,34 +1151,5 @@ describe('amoClient.getUrlBasename', function() {
   it('strips the query string', function() {
     const base = amoClient.getUrlBasename('http://foo.com/bar.zip?baz=quz');
     expect(base).to.be.equal('bar.zip');
-  });
-});
-
-describe('amoClient.PseudoProgress', function() {
-  beforeEach(function() {
-    this.setIntervalMock = sinon.spy(() => 'interval-id');
-    this.clearIntervalMock = sinon.spy(() => {});
-
-    this.progress = new amoClient.PseudoProgress({
-      setInterval: this.setIntervalMock,
-      clearInterval: this.clearIntervalMock,
-      stdout: {
-        columns: 80,
-        isTTY: true,
-        write() {},
-      },
-    });
-  });
-
-  it('should set an interval', function() {
-    this.progress.animate();
-    expect(this.setIntervalMock.called).to.be.equal(true);
-  });
-
-  it('should clear an interval', function() {
-    this.progress.animate();
-    expect(this.setIntervalMock.called).to.be.equal(true);
-    this.progress.finish();
-    expect(this.clearIntervalMock.firstCall.args[0]).to.be.equal('interval-id');
   });
 });
