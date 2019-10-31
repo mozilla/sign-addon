@@ -267,7 +267,7 @@ export class Client {
     apiJwtExpiresIn = 60 * 5, // 5 minutes
     debugLogging = false,
     signedStatusCheckInterval = 1000,
-    signedStatusCheckTimeout = 120000, // 2 minutes.
+    signedStatusCheckTimeout = 900000, // 15 minutes.
     logger = console,
     downloadDir = process.cwd(),
     fs = defaultFs,
