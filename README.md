@@ -120,6 +120,14 @@ In the project directory, you can run the following commands. There are a few co
 
 This packages the library for production into the `dist/` folder.
 
+#### `npm run changelog`
+
+This creates a changelog of all unreleased changes (in markdown). See the [Releasing](#releasing) section for more information.
+
+### `npm run changelog-lint`
+
+This lints the commit messages. See the [Writing commit messages](#writing-commit-messages) section for more information.
+
 #### `npm run eslint`
 
 This runs [ESLint][] to discover problems within our codebase without executing it. ESLint also enforces some patterns and practices.
