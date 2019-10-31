@@ -96,7 +96,7 @@ class MockRequest {
 describe('amoClient.Client', function() {
   function setUp() {
     /* jshint validthis: true */
-    this.apiUrlPrefix = 'http://not-a-real-amo-api.com/api/v3';
+    this.apiUrlPrefix = 'http://not-a-real-amo-api.com/api/v4';
 
     this.newClient = (overrides) => {
       const opt = {

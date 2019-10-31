@@ -39,7 +39,7 @@ export default function signAddon({
   // Your API secret (JWT secret) from AMO Devhub.
   apiSecret,
   // Optional arguments:
-  apiUrlPrefix = 'https://addons.mozilla.org/api/v3',
+  apiUrlPrefix = 'https://addons.mozilla.org/api/v4',
   // Number of seconds until the JWT token for the API request expires.
   // This must match the expiration time that the API server accepts.
   apiJwtExpiresIn,
