@@ -75,7 +75,8 @@ signAddon({
       console.log(result.id);
     } else {
       console.error('Your add-on could not be signed!');
-      console.error('Check the console for details.');
+      console.error('Error code: ' + result.errorCode);
+      console.error('Details: ' + result.errorDetails);
     }
     console.log(result.success ? 'SUCCESS' : 'FAIL');
   })

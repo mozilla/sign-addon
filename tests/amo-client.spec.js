@@ -239,6 +239,8 @@ describe(__filename, () => {
 
         expect(waitForSignedAddonStub).not.toHaveBeenCalled();
         expect(result.success).toEqual(false);
+        expect(result.errorCode).toEqual('SERVER_FAILURE');
+        expect(result.errorDetails).toEqual('version already exists');
       });
 
       it('handles incorrect status code for error responses', function() {
@@ -253,6 +255,8 @@ describe(__filename, () => {
 
         return sign().then((result) => {
           expect(result.success).toEqual(false);
+          expect(result.errorCode).toEqual('SERVER_FAILURE');
+          expect(result.errorDetails).toEqual('some server error');
         });
       });
 
@@ -376,7 +380,11 @@ describe(__filename, () => {
         client._request = new MockRequest({
           responseQueue: [
             createValidationResponse({ valid: false, processed: false }),
-            createValidationResponse({ valid: false, processed: true }),
+            createValidationResponse({
+              valid: false,
+              processed: true,
+              validation_url: 'http://amo/validation',
+            }),
           ],
         });
 
@@ -384,6 +392,8 @@ describe(__filename, () => {
           // Expect exactly two GETs before resolution.
           expect(client._request.calls.length).toEqual(2);
           expect(result.success).toEqual(false);
+          expect(result.errorCode).toEqual('VALIDATION_FAILED');
+          expect(result.errorDetails).toEqual('http://amo/validation');
         });
       });
 
@@ -416,6 +426,7 @@ describe(__filename, () => {
 
         return waitForSignedAddon().then(function(result) {
           expect(result.success).toEqual(false);
+          expect(result.errorCode).toEqual('ADDON_NOT_AUTO_SIGNED');
         });
       });
 
