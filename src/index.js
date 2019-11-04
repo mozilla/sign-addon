@@ -1,6 +1,4 @@
-// Importing this like `import fs from "mz/fs"` was causing usage on
-// npm 2.x to throw missing dependency errors. *shrug*
-import { fs } from 'mz';
+import fs from 'mz/fs';
 
 import { Client as DefaultAMOClient } from './amo-client';
 
@@ -27,7 +25,7 @@ import { Client as DefaultAMOClient } from './amo-client';
  *
  * @param {SignAddonParams} params
  */
-export default function signAddon({
+const signAddon = async ({
   // Absolute path to add-on XPI file.
   xpiPath,
   // The add-on ID as recognized by AMO. Example: my-addon@jetpack
@@ -60,60 +58,59 @@ export default function signAddon({
   // Not all properties are guaranteed to be applied.
   apiRequestConfig,
   AMOClient = DefaultAMOClient,
-}) {
-  return new Promise((resolve) => {
-    /**
-     * @param {string} name
-     */
-    function reportEmpty(name) {
-      throw new Error(`required argument was empty: ${name}`);
-    }
+}) => {
+  /**
+   * @param {string} name
+   */
+  function reportEmpty(name) {
+    throw new Error(`required argument was empty: ${name}`);
+  }
 
-    if (!xpiPath) {
-      reportEmpty('xpiPath');
-    }
-    if (!version) {
-      reportEmpty('version');
-    }
-    if (!apiSecret) {
-      reportEmpty('apiSecret');
-    }
-    if (!apiKey) {
-      reportEmpty('apiKey');
-    }
+  if (!xpiPath) {
+    reportEmpty('xpiPath');
+  }
 
-    resolve();
-  })
-    .then(() => fs.stat(xpiPath))
-    .catch((statError) => {
-      throw new Error(`error with ${xpiPath}: ${statError}`);
-    })
-    .then((stats) => {
-      if (!stats.isFile) {
-        throw new Error(`not a file: ${xpiPath}`);
-      }
-    })
-    .then(() => {
-      const client = new AMOClient({
-        apiKey,
-        apiSecret,
-        apiUrlPrefix,
-        apiJwtExpiresIn,
-        downloadDir,
-        debugLogging: verbose,
-        signedStatusCheckTimeout: timeout,
-        proxyServer: apiProxy,
-        requestConfig: apiRequestConfig,
-      });
+  if (!version) {
+    reportEmpty('version');
+  }
 
-      return client.sign({
-        xpiPath,
-        guid: id,
-        version,
-        channel,
-      });
-    });
-}
+  if (!apiSecret) {
+    reportEmpty('apiSecret');
+  }
+
+  if (!apiKey) {
+    reportEmpty('apiKey');
+  }
+
+  try {
+    const stats = await fs.stat(xpiPath);
+
+    if (!stats.isFile) {
+      throw new Error(`not a file: ${xpiPath}`);
+    }
+  } catch (statError) {
+    throw new Error(`error with ${xpiPath}: ${statError}`);
+  }
+
+  const client = new AMOClient({
+    apiKey,
+    apiSecret,
+    apiUrlPrefix,
+    apiJwtExpiresIn,
+    downloadDir,
+    debugLogging: verbose,
+    signedStatusCheckTimeout: timeout,
+    proxyServer: apiProxy,
+    requestConfig: apiRequestConfig,
+  });
+
+  return client.sign({
+    xpiPath,
+    guid: id,
+    version,
+    channel,
+  });
+};
 
 /**
  * @param {SignAddonParams} options
@@ -124,21 +121,24 @@ export default function signAddon({
  * }} extras
  * @returns {Promise<void>}
  */
-export function signAddonAndExit(
+export const signAddonAndExit = async (
   options,
   { systemProcess = process, throwError = false, logger = console },
-) {
-  return signAddon(options)
-    .then((result) => {
-      logger.log(result.success ? 'SUCCESS' : 'FAIL');
-      systemProcess.exit(result.success ? 0 : 1);
-    })
-    .catch((err) => {
-      logger.error('FAIL');
-      if (throwError) {
-        throw err;
-      }
-      logger.error(err.stack);
-      systemProcess.exit(1);
-    });
-}
+) => {
+  try {
+    const result = await signAddon(options);
+    logger.log(result.success ? 'SUCCESS' : 'FAIL');
+    systemProcess.exit(result.success ? 0 : 1);
+  } catch (err) {
+    logger.error('FAIL');
+
+    if (throwError) {
+      throw err;
+    }
+
+    logger.error(err.stack);
+    systemProcess.exit(1);
+  }
+};
+
+export default signAddon;
