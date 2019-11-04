@@ -2,7 +2,7 @@
 
 Sign a Firefox add-on with Mozilla's [web service](http://addons-server.readthedocs.org/en/latest/topics/api/signing.html).
 
-[![Build Status](https://travis-ci.org/mozilla/sign-addon.svg?branch=master)](https://travis-ci.org/mozilla/sign-addon)
+[![Build Status](https://travis-ci.org/mozilla/sign-addon.svg?branch=master)](https://travis-ci.org/mozilla/sign-addon) [![npm version](https://badge.fury.io/js/sign-addon.svg)](https://badge.fury.io/js/sign-addon)
 
 ## Installation
 
@@ -119,6 +119,14 @@ In the project directory, you can run the following commands. There are a few co
 #### `npm run build`
 
 This packages the library for production into the `dist/` folder.
+
+#### `npm run changelog`
+
+This creates a changelog of all unreleased changes (in markdown). See the [Releasing](#releasing) section for more information.
+
+### `npm run changelog-lint`
+
+This lints the commit messages. See the [Writing commit messages](#writing-commit-messages) section for more information.
 
 #### `npm run eslint`
 
