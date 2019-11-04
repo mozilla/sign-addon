@@ -10,72 +10,69 @@ import jwt from 'jsonwebtoken';
 import * as amoClient from '../src/amo-client';
 import { MockRequest, MockProgress } from './helpers';
 
-describe(__filename, () => {
-  describe('Client', function() {
-    function setUp() {
-      /* jshint validthis: true */
-      this.apiUrlPrefix = 'http://not-a-real-amo-api.com/api/v4';
+/** @typedef {import('../src/amo-client').ClientParams} ClientParams */
 
-      this.newClient = (overrides) => {
-        const opt = {
-          apiKey: 'fake-api-key',
-          apiSecret: 'fake-api-secret',
-          apiUrlPrefix: this.apiUrlPrefix,
-          signedStatusCheckInterval: 0,
-          fs: {
-            createReadStream() {
-              return 'fake-read-stream';
-            },
-          },
-          request: new MockRequest(),
-          validateProgress: new MockProgress(),
-          ...overrides,
-        };
-        return new amoClient.Client(opt);
+describe(__filename, () => {
+  describe('Client', () => {
+    const defaultApiUrlPrefix = 'http://not-a-real-amo-api.com/api/v4';
+
+    const createFakeFS = () => {
+      return {
+        createReadStream() {
+          return 'fake-read-stream';
+        },
+      };
+    };
+
+    /**
+     * @param {Partial<ClientParams>} overrides
+     */
+    const createClient = (overrides = {}) => {
+      const opt = {
+        apiKey: 'fake-api-key',
+        apiSecret: 'fake-api-secret',
+        apiUrlPrefix: defaultApiUrlPrefix,
+        fs: createFakeFS(),
+        request: new MockRequest(),
+        signingProgress: new MockProgress(),
+        statusCheckInterval: 0,
+        validateProgress: new MockProgress(),
+        ...overrides,
       };
 
-      this.client = this.newClient();
-    }
+      return new amoClient.Client(opt);
+    };
 
     describe('signing', function() {
-      beforeEach(function() {
-        setUp.call(this);
+      let client;
 
-        this.sign = (confOverrides) => {
-          const conf = {
-            guid: 'some-guid',
-            version: 'some-version',
-            xpiPath: 'some-xpi-path',
-            ...confOverrides,
-          };
-          return this.client.sign(conf);
-        };
-
-        this.waitForSignedAddon = (url, overrides) => {
-          const options = {
-            setAbortTimeout: () => {},
-            ...overrides,
-          };
-          return this.client.waitForSignedAddon(
-            url || '/some-status-url',
-            options,
-          );
-        };
+      beforeEach(() => {
+        client = createClient();
       });
 
-      function signedResponse(overrides) {
+      const sign = (confOverrides = {}) => {
+        const conf = {
+          guid: 'some-guid',
+          version: 'some-version',
+          xpiPath: 'some-xpi-path',
+          ...confOverrides,
+        };
+        return client.sign(conf);
+      };
+
+      const waitForSignedAddon = (url = '/some-status-url', options = {}) => {
+        return client.waitForSignedAddon(url, options);
+      };
+
+      const createValidResponse = (overrides = {}) => {
         const res = {
+          active: false,
+          automated_signing: true,
+          files: [],
           guid: 'an-addon-guid',
-          active: true,
           processed: true,
+          reviewed: false,
           valid: true,
-          reviewed: true,
-          files: [
-            {
-              signed: true,
-              download_url: 'http://amo/some-signed-file-1.2.3.xpi',
-            },
-          ],
           validation_url: 'http://amo/validation-results/',
           ...overrides,
         };
@@ -83,7 +80,26 @@ describe(__filename, () => {
         return {
           responseBody: res,
         };
-      }
+      };
+
+      const createSignedResponse = (overrides = {}) => {
+        const res = {
+          ...createValidResponse().responseBody,
+          active: true,
+          reviewed: true,
+          files: [
+            {
+              signed: true,
+              download_url: 'http://amo/some-signed-file-1.2.3.xpi',
+            },
+          ],
+          ...overrides,
+        };
+
+        return {
+          responseBody: res,
+        };
+      };
 
       function getDownloadStubs() {
         const fakeResponse = {
@@ -105,7 +121,7 @@ describe(__filename, () => {
           },
         };
 
-        const { files } = signedResponse().responseBody;
+        const { files } = createSignedResponse().responseBody;
         const fakeRequest = sinon.spy(() => fakeResponse);
         const createWriteStream = sinon.spy(() => fakeFileWriter);
         const stdout = {
@@ -115,16 +131,16 @@ describe(__filename, () => {
         return { files, request: fakeRequest, createWriteStream, stdout };
       }
 
-      it('lets you sign an add-on', function() {
+      it('lets you sign an add-on', async () => {
         const apiStatusUrl = 'https://api/addon/version/upload/abc123';
         const conf = {
           guid: 'a-guid',
           version: 'a-version',
         };
-        const waitForSignedAddon = sinon.spy(() => {});
-        this.client.waitForSignedAddon = waitForSignedAddon;
+        const waitForSignedAddonStub = sinon.stub();
+        client.waitForSignedAddon = waitForSignedAddonStub;
 
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 202 },
           // Partial response like:
           // http://olympia.readthedocs.org/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
@@ -133,35 +149,35 @@ describe(__filename, () => {
           },
         });
 
-        return this.sign(conf).then(() => {
-          const putCall = this.client._request.calls[0];
-          expect(putCall.name).to.be.equal('put');
+        await sign(conf);
 
-          const partialUrl = `/addons/${conf.guid}/versions/${conf.version}`;
-          expect(putCall.conf.url).to.include(partialUrl);
-          expect(putCall.conf.formData.upload).to.be.equal('fake-read-stream');
-          // When doing a PUT, the version is in the URL not the form data.
-          expect(putCall.conf.formData.version).to.be.equal(undefined);
-          // When no channel is supplied, the API is expected to use the most recent channel.
-          expect(putCall.conf.formData.channel).to.be.equal(undefined);
+        const putCall = client._request.calls[0];
+        expect(putCall.name).to.be.equal('put');
 
-          expect(waitForSignedAddon.called).to.be.equal(true);
-          expect(waitForSignedAddon.firstCall.args[0]).to.be.equal(
-            apiStatusUrl,
-          );
-        });
+        const partialUrl = `/addons/${conf.guid}/versions/${conf.version}`;
+        expect(putCall.conf.url).to.include(partialUrl);
+        expect(putCall.conf.formData.upload).to.be.equal('fake-read-stream');
+        // When doing a PUT, the version is in the URL not the form data.
+        expect(putCall.conf.formData.version).to.be.equal(undefined);
+        // When no channel is supplied, the API is expected to use the most recent channel.
+        expect(putCall.conf.formData.channel).to.be.equal(undefined);
+
+        expect(waitForSignedAddonStub.called).to.be.equal(true);
+        expect(waitForSignedAddonStub.firstCall.args[0]).to.be.equal(
+          apiStatusUrl,
+        );
       });
 
-      it('lets you sign an add-on without an ID', function() {
+      it('lets you sign an add-on without an ID', async () => {
         const apiStatusUrl = 'https://api/addon/version/upload/abc123';
         const conf = {
           guid: null,
           version: 'a-version',
         };
-        const waitForSignedAddon = sinon.spy(() => {});
-        this.client.waitForSignedAddon = waitForSignedAddon;
+        const waitForSignedAddonStub = sinon.stub();
+        client.waitForSignedAddon = waitForSignedAddonStub;
 
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 202 },
           // Partial response like:
           // http://olympia.readthedocs.org/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
@@ -170,97 +186,93 @@ describe(__filename, () => {
           },
         });
 
-        return this.sign(conf).then(() => {
-          const call = this.client._request.calls[0];
-          expect(call.name).to.be.equal('post');
+        await sign(conf);
 
-          // Make sure the endpoint ends with /addons/
-          expect(call.conf.url).to.match(/\/addons\/$/);
-          expect(call.conf.formData.upload).to.be.equal('fake-read-stream');
-          expect(call.conf.formData.version).to.be.equal(conf.version);
-          // Channel is not a valid parameter for new add-ons.
-          expect(call.conf.formData.channel).to.be.equal(undefined);
+        const call = client._request.calls[0];
+        expect(call.name).to.be.equal('post');
 
-          expect(waitForSignedAddon.called).to.be.equal(true);
-          expect(waitForSignedAddon.firstCall.args[0]).to.be.equal(
-            apiStatusUrl,
-          );
-        });
+        // Make sure the endpoint ends with /addons/
+        expect(call.conf.url).to.match(/\/addons\/$/);
+        expect(call.conf.formData.upload).to.be.equal('fake-read-stream');
+        expect(call.conf.formData.version).to.be.equal(conf.version);
+        // Channel is not a valid parameter for new add-ons.
+        expect(call.conf.formData.channel).to.be.equal(undefined);
+
+        expect(waitForSignedAddonStub.called).to.be.equal(true);
+        expect(waitForSignedAddonStub.firstCall.args[0]).to.be.equal(
+          apiStatusUrl,
+        );
       });
 
-      it('lets you sign an add-on on a specific channel', function() {
+      it('lets you sign an add-on on a specific channel', async () => {
         const conf = {
           channel: 'listed',
         };
-        const waitForSignedAddon = sinon.spy(() => {});
-        this.client.waitForSignedAddon = waitForSignedAddon;
-
-        this.client._request = new MockRequest({
+        client.waitForSignedAddon = sinon.stub();
+        client._request = new MockRequest({
           httpResponse: { statusCode: 202 },
         });
 
-        return this.sign(conf).then(() => {
-          expect(
-            this.client._request.calls[0].conf.formData.channel,
-          ).to.be.equal('listed');
-        });
+        await sign(conf);
+
+        expect(client._request.calls[0].conf.formData.channel).to.be.equal(
+          'listed',
+        );
       });
 
-      it('lets you sign an add-on without an ID ignoring channel', function() {
+      it('lets you sign an add-on without an ID ignoring channel', async () => {
         const conf = {
           guid: null,
           channel: 'listed',
         };
-        const waitForSignedAddon = sinon.spy(() => {});
-        this.client.waitForSignedAddon = waitForSignedAddon;
-
-        this.client._request = new MockRequest({
+        client.waitForSignedAddon = sinon.stub();
+        client._request = new MockRequest({
           httpResponse: { statusCode: 202 },
         });
 
-        return this.sign(conf).then(() => {
-          expect(
-            this.client._request.calls[0].conf.formData.channel,
-          ).to.be.equal(undefined);
-        });
+        await sign(conf);
+
+        expect(client._request.calls[0].conf.formData.channel).to.be.equal(
+          undefined,
+        );
       });
 
-      it('handles already validated add-ons', function() {
-        const waitForSignedAddon = sinon.spy(() => {});
-        this.client.waitForSignedAddon = waitForSignedAddon;
+      it('handles already validated add-ons', async () => {
+        const waitForSignedAddonStub = sinon.stub();
+        client.waitForSignedAddon = waitForSignedAddonStub;
 
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 409 },
           responseBody: { error: 'version already exists' },
         });
 
-        return this.sign().then(function(result) {
-          expect(waitForSignedAddon.called).to.be.equal(false);
-          expect(result.success).to.be.equal(false);
-        });
+        const result = await sign();
+
+        expect(waitForSignedAddonStub.called).to.be.equal(false);
+        expect(result.success).to.be.equal(false);
       });
 
       it('handles incorrect status code for error responses', function() {
-        this.client.waitForSignedAddon = () => {};
+        client.waitForSignedAddon = () => {};
 
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           // For some reason, the API was returning errors with a 200.
           // See https://github.com/mozilla/addons-server/issues/3097
           httpResponse: { statusCode: 200 },
           responseBody: { error: 'some server error' },
         });
 
-        return this.sign().then((result) => {
+        return sign().then((result) => {
           expect(result.success).to.be.equal(false);
         });
       });
 
       it('throws an error when signing on a 500 server response', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 500 },
         });
 
-        return this.sign()
+        return sign()
           .then(function() {
             throw new Error('unexpected success');
           })
@@ -271,7 +283,7 @@ describe(__filename, () => {
 
       it('waits for passing validation', function() {
         const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
-        this.client.downloadSignedFiles = downloadSignedFiles;
+        client.downloadSignedFiles = downloadSignedFiles;
 
         const files = [
           {
@@ -279,23 +291,25 @@ describe(__filename, () => {
             download_url: 'http://amo/the-signed-file-1.2.3.xpi',
           },
         ];
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           responseQueue: [
-            signedResponse({ valid: false, processed: false }),
-            signedResponse({ valid: true, processed: true, files }),
+            createValidResponse({ valid: false, processed: false }),
+            createValidResponse(),
+            createSignedResponse({ files }),
           ],
         });
 
         const statusUrl = '/addons/something/versions/1.2.3/';
-        return this.waitForSignedAddon(statusUrl).then(() => {
-          // Expect exactly two GETs before resolution.
-          expect(this.client._request.calls.length).to.be.equal(2);
-          expect(this.client._request.calls[0].conf.url).to.include(statusUrl);
+        return waitForSignedAddon(statusUrl).then(() => {
+          // Expect exactly three GETs before resolution.
+          expect(client._request.calls.length).to.be.equal(3);
+          expect(client._request.calls[0].conf.url).to.include(statusUrl);
           expect(downloadSignedFiles.firstCall.args[0]).to.be.deep.equal(files);
         });
       });
 
-      it('resolves with the extension ID in the result', function() {
+      it('resolves with the extension ID in the result', async () => {
+        const guid = 'some-addon-guid';
         const files = [
           {
             signed: true,
@@ -303,80 +317,85 @@ describe(__filename, () => {
           },
         ];
         const downloadSignedFiles = sinon.spy(() => Promise.resolve({ files }));
-        this.client.downloadSignedFiles = downloadSignedFiles;
-
-        const guid = 'some-addon-guid';
-        this.client._request = new MockRequest({
+        client.downloadSignedFiles = downloadSignedFiles;
+        client._request = new MockRequest({
           responseQueue: [
-            signedResponse({ valid: true, processed: true, files, guid }),
+            createValidResponse({ guid }),
+            createSignedResponse({ files, guid }),
           ],
         });
 
-        return this.waitForSignedAddon('/status-url').then((result) => {
-          expect(result.files).to.be.deep.equal(files);
-          expect(result.id).to.be.deep.equal(guid);
-        });
+        const result = await waitForSignedAddon('/status-url');
+
+        expect(result.files).to.be.deep.equal(files);
+        expect(result.id).to.be.deep.equal(guid);
       });
 
       it('waits for for fully reviewed files', function() {
         const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
-        this.client.downloadSignedFiles = downloadSignedFiles;
+        client.downloadSignedFiles = downloadSignedFiles;
 
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           responseQueue: [
-            // This is a situation where the upload has been validated
-            // but the version object has not been saved yet.
-            signedResponse({ valid: true, processed: true, reviewed: false }),
-            signedResponse({ valid: true, processed: true, reviewed: true }),
+            // This is a situation where the upload has been validated but the
+            // version object has not been saved yet.
+            createValidResponse({ valid: false, processed: false }),
+            createValidResponse(),
+            createSignedResponse({
+              valid: true,
+              processed: true,
+              reviewed: true,
+            }),
           ],
         });
 
-        return this.waitForSignedAddon().then(() => {
-          // Expect exactly two GETs before resolution.
-          expect(this.client._request.calls.length).to.be.equal(2);
+        return waitForSignedAddon().then(() => {
+          // Expect exactly 3 GETs before resolution.
+          expect(client._request.calls.length).to.be.equal(3);
           expect(downloadSignedFiles.called).to.be.equal(true);
         });
       });
 
-      it('waits until signed files are ready', function() {
+      it('waits until signed files are ready', async () => {
         const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
-        this.client.downloadSignedFiles = downloadSignedFiles;
-        this.client._request = new MockRequest({
+        client.downloadSignedFiles = downloadSignedFiles;
+        client._request = new MockRequest({
           responseQueue: [
-            signedResponse({ files: [] }), // valid, but files aren"t ready yet
-            signedResponse(), // files are ready
+            createValidResponse(),
+            createSignedResponse({ files: [] }), // somehow valid & signed, but files aren"t ready yet
+            createSignedResponse(), // files are ready
           ],
         });
 
-        return this.waitForSignedAddon().then(() => {
-          // Expect exactly two GETs before resolution.
-          expect(this.client._request.calls.length).to.be.equal(2);
-          expect(downloadSignedFiles.called).to.be.equal(true);
-        });
+        await waitForSignedAddon();
+
+        // Expect exactly three GETs before resolution.
+        expect(client._request.calls.length).to.be.equal(3);
+        expect(downloadSignedFiles.called).to.be.equal(true);
       });
 
       it('waits for failing validation', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           responseQueue: [
-            signedResponse({ valid: false, processed: false }),
-            signedResponse({ valid: false, processed: true }),
+            createValidResponse({ valid: false, processed: false }),
+            createValidResponse({ valid: false, processed: true }),
           ],
         });
 
-        return this.waitForSignedAddon().then((result) => {
+        return waitForSignedAddon().then((result) => {
           // Expect exactly two GETs before resolution.
-          expect(this.client._request.calls.length).to.be.equal(2);
+          expect(client._request.calls.length).to.be.equal(2);
           expect(result.success).to.be.equal(false);
         });
       });
 
       it('passes through status check request errors', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 500 },
           responseError: new Error('error from status check URL'),
         });
 
-        return this.waitForSignedAddon()
+        return waitForSignedAddon()
           .then(() => {
             throw new Error('Unexpected success');
           })
@@ -386,9 +405,10 @@ describe(__filename, () => {
       });
 
       it('handles complete yet inactive addons', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           responseQueue: [
-            signedResponse({
+            createValidResponse(),
+            createSignedResponse({
               valid: true,
               processed: true,
               automated_signing: false,
@@ -396,59 +416,61 @@ describe(__filename, () => {
           ],
         });
 
-        return this.waitForSignedAddon().then(function(result) {
+        return waitForSignedAddon().then(function(result) {
           expect(result.success).to.be.equal(false);
         });
       });
 
-      it('aborts validation check after timeout', function() {
+      it('aborts validation check after timeout', async () => {
         const _clearTimeout = sinon.stub();
-
-        return this.client
-          .waitForSignedAddon('/status-url', {
-            _clearTimeout,
-            _setStatusCheckTimeout() {
-              return 'status-check-timeout-id';
-            },
-            abortAfter: 0,
-          })
-          .then(function() {
-            throw new Error('Unexpected success');
-          })
-          .catch(function(err) {
-            expect(err.message).to.include('took too long');
-            expect(_clearTimeout.firstCall.args[0]).to.be.equal(
-              'status-check-timeout-id',
-            );
-          });
-      });
-
-      it('can configure signing status check timeout', function() {
-        const _clearTimeout = sinon.stub();
-        const client = this.newClient({
-          // This should cause an immediate timeout.
-          signedStatusCheckTimeout: 0,
+        const _client = createClient({
+          // This causes an immediate failure.
+          statusCheckTimeout: 0,
         });
 
-        return client
+        await _client
           .waitForSignedAddon('/status-url', {
             _clearTimeout,
             _setStatusCheckTimeout() {
               return 'status-check-timeout-id';
             },
           })
-          .then(function() {
-            throw new Error('Unexpected success');
-          })
-          .catch(function(err) {
-            expect(err.message).to.include('took too long');
+          .catch((error) => {
+            expect(error.message).to.contain('Validation took too long');
           });
+
+        expect(_clearTimeout.firstCall.args[0]).to.be.equal(
+          'status-check-timeout-id',
+        );
+      });
+
+      it('aborts signing check after timeout', async () => {
+        const _client = createClient({
+          // This causes an immediate failure but because a validation response
+          // is set, it will fail during the signing check.
+          statusCheckTimeout: 0,
+        });
+
+        _client._request = new MockRequest({
+          responseQueue: [
+            createValidResponse(),
+            createSignedResponse({ active: false }),
+          ],
+        });
+
+        await _client
+          .waitForSignedAddon('/status-url')
+          .catch((error) =>
+            expect(error.message).to.include('Signing took too long'),
+          );
       });
 
       it('can use a request proxy', function() {
         const proxyServer = 'http://yourproxy:6000';
-        const client = this.newClient({ proxyServer });
-        const conf = client.configureRequest({ url: 'http://site' });
+        const _client = createClient({ proxyServer });
+
+        const conf = _client.configureRequest({ url: 'http://site' });
+
         expect(conf.proxy).to.be.equal(proxyServer);
       });
 
@@ -458,38 +480,45 @@ describe(__filename, () => {
           tunnel: true,
           strictSSL: true,
         };
-        const client = this.newClient({ requestConfig });
-        const conf = client.configureRequest({ url: 'http://site' });
+        const _client = createClient({ requestConfig });
+
+        const conf = _client.configureRequest({ url: 'http://site' });
+
         expect(conf.url).to.be.equal('http://site');
         expect(conf.tunnel).to.be.equal(requestConfig.tunnel);
         expect(conf.strictSSL).to.be.equal(requestConfig.strictSSL);
       });
 
-      it('clears abort timeout after resolution', function() {
+      it('clears abort timeouts after resolution', async () => {
         const _clearTimeout = sinon.stub();
-        this.client._request = new MockRequest({
-          responseQueue: [signedResponse()],
+        client._request = new MockRequest({
+          responseQueue: [createValidResponse(), createSignedResponse()],
         });
 
         const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
-        this.client.downloadSignedFiles = downloadSignedFiles;
+        client.downloadSignedFiles = downloadSignedFiles;
 
-        return this.waitForSignedAddon('/status-url/', {
+        await waitForSignedAddon('/status-url', {
           _clearTimeout,
-          _setAbortTimeout() {
-            return 'abort-timeout-id';
+          _setAbortValidationTimeout() {
+            return 'abort-validation-timeout-id';
+          },
+          _setAbortSigningTimeout() {
+            return 'abort-signing-timeout-id';
           },
           _setStatusCheckTimeout() {
             return 'status-check-timeout-id';
           },
-        }).then(function() {
-          // Assert that signing resolved successfully.
-          expect(downloadSignedFiles.called).to.be.equal(true);
-          // Assert that the timeout-to-abort was cleared.
-          expect(_clearTimeout.firstCall.args[0]).to.be.equal(
-            'abort-timeout-id',
-          );
         });
+
+        // Assert that signing resolved successfully.
+        expect(downloadSignedFiles.called).to.be.equal(true);
+        expect(_clearTimeout.firstCall.args[0]).to.be.equal(
+          'abort-validation-timeout-id',
+        );
+        expect(_clearTimeout.secondCall.args[0]).to.be.equal(
+          'abort-signing-timeout-id',
+        );
       });
 
       it('downloads signed files', function() {
@@ -512,11 +541,11 @@ describe(__filename, () => {
           },
         };
 
-        const { files } = signedResponse().responseBody;
+        const { files } = createSignedResponse().responseBody;
         const fakeRequest = sinon.spy(() => fakeResponse);
         const createWriteStream = sinon.spy(() => fakeFileWriter);
 
-        return this.client
+        return client
           .downloadSignedFiles(files, {
             request: fakeRequest,
             createWriteStream,
@@ -555,11 +584,11 @@ describe(__filename, () => {
           },
         };
 
-        const { files } = signedResponse().responseBody;
+        const { files } = createSignedResponse().responseBody;
         const fakeRequest = sinon.spy(() => fakeResponse);
         const { createWriteStream } = getDownloadStubs();
 
-        return this.client
+        return client
           .downloadSignedFiles(files, {
             request: fakeRequest,
             createWriteStream,
@@ -583,10 +612,10 @@ describe(__filename, () => {
 
       it('configures a download destination in the contructor', function() {
         const downloadDir = '/some/fake/destination-dir/';
-        const client = this.newClient({ downloadDir });
+        const _client = createClient({ downloadDir });
         const stubs = getDownloadStubs();
 
-        return client.downloadSignedFiles(stubs.files, stubs).then(() => {
+        return _client.downloadSignedFiles(stubs.files, stubs).then(() => {
           const filePath = path.join(downloadDir, 'some-signed-file-1.2.3.xpi');
           expect(stubs.createWriteStream.firstCall.args[0]).to.be.equal(
             filePath,
@@ -595,7 +624,7 @@ describe(__filename, () => {
       });
 
       it('fails for unsigned files', function() {
-        let { files } = signedResponse().responseBody;
+        let { files } = createSignedResponse().responseBody;
         files = files.map(function(fileOb) {
           return {
             ...fileOb,
@@ -605,7 +634,7 @@ describe(__filename, () => {
         });
         const stubs = getDownloadStubs();
 
-        return this.client
+        return client
           .downloadSignedFiles(files, stubs)
           .then(function() {
             throw new Error('Unexpected success');
@@ -623,20 +652,18 @@ describe(__filename, () => {
           download_url: 'http://nope.org/should-not-be-downloaded.xpi',
         });
 
-        return this.client
-          .downloadSignedFiles(stubs.files, stubs)
-          .then((result) => {
-            const filePath = path.join(
-              process.cwd(),
-              'some-signed-file-1.2.3.xpi',
-            );
-            expect(result.success).to.be.equal(true);
-            expect(result.downloadedFiles).to.be.deep.equal([filePath]);
-            expect(stubs.request.callCount).to.be.equal(stubs.files.length - 1);
-            expect(stubs.request.firstCall.args[0].url).to.be.equal(
-              stubs.files[0].download_url,
-            );
-          });
+        return client.downloadSignedFiles(stubs.files, stubs).then((result) => {
+          const filePath = path.join(
+            process.cwd(),
+            'some-signed-file-1.2.3.xpi',
+          );
+          expect(result.success).to.be.equal(true);
+          expect(result.downloadedFiles).to.be.deep.equal([filePath]);
+          expect(stubs.request.callCount).to.be.equal(stubs.files.length - 1);
+          expect(stubs.request.firstCall.args[0].url).to.be.equal(
+            stubs.files[0].download_url,
+          );
+        });
       });
 
       it('handles download errors', function() {
@@ -652,7 +679,7 @@ describe(__filename, () => {
           pipe() {},
         };
 
-        return this.client
+        return client
           .downloadSignedFiles(stubs.files, {
             ...stubs,
             request: () => errorResponse,
@@ -663,6 +690,21 @@ describe(__filename, () => {
           .catch((err) => {
             expect(err.message).to.include('download error');
           });
+      });
+
+      describe('waitForSignedAddon', () => {
+        it('rejects when there is an error in checkSignedStatus', async () => {
+          const responseError = new Error('some error');
+          client._request = new MockRequest({
+            responseQueue: [createValidResponse(), { responseError }],
+          });
+
+          try {
+            await waitForSignedAddon();
+          } catch (err) {
+            expect(err).to.equal(responseError);
+          }
+        });
       });
     });
 
@@ -772,26 +814,28 @@ describe(__filename, () => {
     });
 
     describe('requests', function() {
+      let client;
+
       beforeEach(function() {
-        setUp.call(this);
+        client = createClient();
       });
 
       it('makes requests with an auth token', function() {
         const request = { url: '/somewhere' };
 
-        return this.client.get(request).then(() => {
-          const call = this.client._request.calls[0];
+        return client.get(request).then(() => {
+          const call = client._request.calls[0];
           const headerMatch = call.conf.headers.Authorization.match(/JWT (.*)/);
           const token = headerMatch[1];
-          const data = jwt.verify(token, this.client.apiSecret);
-          expect(data.iss).to.be.equal(this.client.apiKey);
+          const data = jwt.verify(token, client.apiSecret);
+          expect(data.iss).to.be.equal(client.apiKey);
           expect(data).to.have.keys(['iss', 'iat', 'exp']);
 
           // Check that the request was configured with all appropriate headers.
           // However, omit the Authorization header since we already verified that
           // above with jwt.verify(). More importantly, the generation of the
           // Authorization header relies on a timestamp so it's not predictable.
-          const expectedConf = this.client.configureRequest(request);
+          const expectedConf = client.configureRequest(request);
           delete expectedConf.headers.Authorization;
           delete call.conf.headers.Authorization;
           expect(call.conf).to.be.deep.equal(expectedConf);
@@ -800,7 +844,7 @@ describe(__filename, () => {
 
       it('lets you configure the jwt expiration', function() {
         const expiresIn = 60 * 15; // 15 minutes
-        const cli = this.newClient({
+        const cli = createClient({
           apiJwtExpiresIn: expiresIn,
         });
 
@@ -821,7 +865,7 @@ describe(__filename, () => {
 
       it('configures a default jwt expiration', function() {
         const defaultExpiry = 60 * 5; // 5 minutes
-        const cli = this.newClient();
+        const cli = createClient();
 
         const fakeJwt = {
           sign: sinon.spy(() => '<JWT token>'),
@@ -838,14 +882,14 @@ describe(__filename, () => {
       });
 
       it('lets you configure a request directly', function() {
-        const conf = this.client.configureRequest({ url: '/path' });
+        const conf = client.configureRequest({ url: '/path' });
         expect(conf).to.have.keys(['headers', 'timeout', 'url']);
         expect(conf.headers).to.have.keys(['Accept', 'Authorization']);
       });
 
       it('preserves request headers', function() {
         const headers = { 'X-Custom': 'thing' };
-        const conf = this.client.configureRequest({
+        const conf = client.configureRequest({
           url: '/path',
           headers,
         });
@@ -854,7 +898,7 @@ describe(__filename, () => {
 
       it('allows you to override request headers', function() {
         const headers = { Accept: 'text/html' };
-        const conf = this.client.configureRequest({
+        const conf = client.configureRequest({
           url: '/path',
           headers,
         });
@@ -863,13 +907,13 @@ describe(__filename, () => {
 
       it('makes relative URLs absolute', function() {
         const urlPath = '/somewhere';
-        const conf = this.client.configureRequest({ url: urlPath });
-        expect(conf.url).to.be.equal(this.apiUrlPrefix + urlPath);
+        const conf = client.configureRequest({ url: urlPath });
+        expect(conf.url).to.be.equal(defaultApiUrlPrefix + urlPath);
       });
 
       it('accepts absolute URLs', function() {
         const absUrl = 'http://some-site/somewhere';
-        const conf = this.client.configureRequest({ url: absUrl });
+        const conf = client.configureRequest({ url: absUrl });
         expect(conf.url).to.be.equal(absUrl);
       });
 
@@ -879,9 +923,9 @@ describe(__filename, () => {
           const urlPath = '/some/path';
 
           requests.push(
-            this.client[method]({ url: urlPath }).then(() => {
-              const call = this.client._request.callMap[method];
-              expect(call.conf.url).to.be.equal(this.apiUrlPrefix + urlPath);
+            client[method]({ url: urlPath }).then(() => {
+              const call = client._request.callMap[method];
+              expect(call.conf.url).to.be.equal(defaultApiUrlPrefix + urlPath);
               expect(call.conf.headers).to.have.keys([
                 'Accept',
                 'Authorization',
@@ -895,7 +939,7 @@ describe(__filename, () => {
       it('configures a request timeout based on JWT expiration', function() {
         // Set a custom JWT expiration:
         const expiresIn = 60 * 15; // 15 minutes
-        const cli = this.newClient({
+        const cli = createClient({
           apiJwtExpiresIn: expiresIn,
         });
 
@@ -908,15 +952,15 @@ describe(__filename, () => {
 
       it('requires a URL', function() {
         expect(() => {
-          this.client.configureRequest({});
+          client.configureRequest({});
         }).to.throw(Error, /URL was not specified/);
       });
 
       it('rejects the request promise on > 200 responses', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 409 },
         });
-        return this.client
+        return client
           .get({ url: '/something' })
           .then(function() {
             throw new Error('unexpected success');
@@ -927,10 +971,10 @@ describe(__filename, () => {
       });
 
       it('rejects the request promise on < 200 responses', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 122 },
         });
-        return this.client
+        return client
           .get({ url: '/something' })
           .then(function() {
             throw new Error('unexpected success');
@@ -942,11 +986,9 @@ describe(__filename, () => {
 
       it('rejects the request promise with callback error', function() {
         const callbackError = new Error('some error');
-        this.client._request = new MockRequest({
-          responseError: callbackError,
-        });
+        client._request = new MockRequest({ responseError: callbackError });
 
-        return this.client
+        return client
           .get({ url: '/something' })
           .then(function() {
             throw new Error('unexpected success');
@@ -957,10 +999,10 @@ describe(__filename, () => {
       });
 
       it('can be configured not to throw on a bad response status', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           httpResponse: { statusCode: 409 },
         });
-        return this.client
+        return client
           .get(
             {
               url: '/something',
@@ -976,9 +1018,9 @@ describe(__filename, () => {
 
       it('resolves the request promise with the HTTP response', function() {
         const httpResponse = { statusCode: 201 };
-        this.client._request = new MockRequest({ httpResponse });
+        client._request = new MockRequest({ httpResponse });
 
-        return this.client.get({ url: '/something' }).then((responseResult) => {
+        return client.get({ url: '/something' }).then((responseResult) => {
           const returnedResponse = responseResult[0];
           expect(returnedResponse).to.be.equal(httpResponse);
         });
@@ -986,9 +1028,9 @@ describe(__filename, () => {
 
       it('resolves the request promise with the response body', function() {
         const responseBody = 'some text response';
-        this.client._request = new MockRequest({ responseBody });
+        client._request = new MockRequest({ responseBody });
 
-        return this.client.get({ url: '/something' }).then((responseResult) => {
+        return client.get({ url: '/something' }).then((responseResult) => {
           const returnedBody = responseResult[1];
           expect(returnedBody).to.be.equal(responseBody);
         });
@@ -997,7 +1039,7 @@ describe(__filename, () => {
       it('resolves the request promise with a JSON object', function() {
         const data = { someKey: 'some value' };
 
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           responseBody: JSON.stringify(data),
           httpResponse: {
             statusCode: 200,
@@ -1007,14 +1049,14 @@ describe(__filename, () => {
           },
         });
 
-        return this.client.get({ url: '/something' }).then((responseResult) => {
+        return client.get({ url: '/something' }).then((responseResult) => {
           const result = responseResult[1];
           expect(result).to.deep.equal(data);
         });
       });
 
       it('ignores broken JSON responses', function() {
-        this.client._request = new MockRequest({
+        client._request = new MockRequest({
           responseBody: '}{', // broken JSON
           httpResponse: {
             statusCode: 200,
@@ -1024,7 +1066,7 @@ describe(__filename, () => {
           },
         });
 
-        return this.client.get({ url: '/something' }).then((responseResult) => {
+        return client.get({ url: '/something' }).then((responseResult) => {
           const result = responseResult[1];
           expect(result).to.be.a('string');
         });

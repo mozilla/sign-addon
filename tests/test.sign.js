@@ -220,7 +220,7 @@ describe('sign', function() {
     }).then(function() {
       expect(fakeClientContructor.called).to.be.equal(true);
       expect(
-        fakeClientContructor.firstCall.args[0].signedStatusCheckTimeout,
+        fakeClientContructor.firstCall.args[0].statusCheckTimeout,
       ).to.be.equal(5000);
     });
   });
