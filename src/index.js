@@ -16,11 +16,11 @@ import { Client as DefaultAMOClient } from './amo-client';
  * @property {ClientParams['apiKey']} apiKey
  * @property {ClientParams['apiSecret']} apiSecret
  * @property {ClientParams['apiUrlPrefix']=} apiUrlPrefix
- * @property {ClientParams['apiJwtExpiresIn']} apiJwtExpiresIn
+ * @property {ClientParams['apiJwtExpiresIn']=} apiJwtExpiresIn
  * @property {ClientParams['debugLogging']=} verbose
- * @property {ReleaseChannel} channel
+ * @property {ReleaseChannel=} channel
  * @property {ClientParams['signedStatusCheckTimeout']=} timeout
- * @property {ClientParams['downloadDir']} downloadDir
+ * @property {ClientParams['downloadDir']=} downloadDir
  * @property {ClientParams['proxyServer']=} apiProxy
  * @property {ClientParams['requestConfig']=} apiRequestConfig
  * @property {typeof DefaultAMOClient=} AMOClient
@@ -119,7 +119,7 @@ export default function signAddon({
  * @param {SignAddonParams} options
  * @param {{
  *   systemProcess?: typeof process,
- *   throwError?: false,
+ *   throwError?: boolean,
  *   logger?: typeof console
  * }} extras
  * @returns {Promise<void>}

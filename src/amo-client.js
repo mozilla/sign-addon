@@ -43,7 +43,7 @@ const defaultClearInterval = clearInterval;
  * @property {string} apiKey - API key string from the Developer Hub
  * @property {string} apiSecret - API secret string from the Developer Hub
  * @property {string} apiUrlPrefix - API URL prefix, including any leading paths
- * @property {number} apiJwtExpiresIn - Number of seconds until the JWT token for the API request expires. This must match the expiration time that the API server accepts
+ * @property {number=} apiJwtExpiresIn - Number of seconds until the JWT token for the API request expires. This must match the expiration time that the API server accepts
  * @property {boolean=} debugLogging - When true, log more information
  * @property {number=} signedStatusCheckInterval - A period in millesconds between checks when waiting on add-on signing
  * @property {number=} signedStatusCheckTimeout -  A length in millesconds to give up if the add-on hasn't been signed
@@ -304,7 +304,7 @@ export class Client {
    * @typedef {object} SignParams
    * @property {string=} guid - optional add-on GUID (ID in install.rdf)
    * @property {string} version - add-on version string
-   * @property {ReleaseChannel} channel - release channel (listed or unlisted)
+   * @property {ReleaseChannel=} channel - release channel (listed or unlisted)
    * @property {string} xpiPath - path to xpi file
    *
    * @param {SignParams} signParams

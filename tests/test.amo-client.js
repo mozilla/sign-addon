@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint max-classes-per-file: 0 */
 import path from 'path';
 
