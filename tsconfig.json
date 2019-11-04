@@ -9,5 +9,5 @@
     "target": "es2015",
     "typeRoots" : ["./node_modules/@types", "./src/@types"]
   },
-  "include": ["src/", "tests/test.sign.js"]
+  "include": ["src/", "tests/"]
 }
