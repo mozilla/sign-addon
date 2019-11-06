@@ -4,6 +4,7 @@
     "checkJs": true,
     "esModuleInterop": true,
     "module": "commonjs",
+    "noEmit": true,
     "moduleResolution": "node",
     "strict": true,
     "target": "es2015",
