@@ -13,6 +13,7 @@
     "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `yarn prettier-dev` before committing\n\n' && exit 1)",
     "prettier-dev": "pretty-quick --branch master",
     "test": "mocha --require @babel/register --reporter=spec --exit tests/",
+    "test-ci": "nyc npm run test && nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "typecheck": "tsc"
   },
   "dependencies": {
@@ -43,12 +44,14 @@
     "babel-eslint": "10.0.3",
     "babel-loader": "8.0.6",
     "chai": "4.2.0",
+    "codecov": "3.6.1",
     "conventional-changelog-cli": "2.0.25",
     "eslint": "6.6.0",
     "eslint-config-amo": "1.26.0",
     "eslint-config-prettier": "6.5.0",
     "eslint-plugin-amo": "1.11.0",
     "mocha": "6.2.2",
+    "nyc": "14.1.1",
     "prettier": "1.18.2",
     "pretty-quick": "2.0.1",
     "rimraf": "3.0.0",
