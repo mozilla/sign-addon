@@ -2,7 +2,7 @@
 
 Sign a Firefox add-on with Mozilla's [web service](http://addons-server.readthedocs.org/en/latest/topics/api/signing.html).
 
-[![Build Status](https://travis-ci.org/mozilla/sign-addon.svg?branch=master)](https://travis-ci.org/mozilla/sign-addon) [![npm version](https://badge.fury.io/js/sign-addon.svg)](https://badge.fury.io/js/sign-addon)
+[![Build Status](https://travis-ci.org/mozilla/sign-addon.svg?branch=master)](https://travis-ci.org/mozilla/sign-addon) [![npm version](https://badge.fury.io/js/sign-addon.svg)](https://badge.fury.io/js/sign-addon) [![codecov](https://codecov.io/gh/mozilla/sign-addon/branch/master/graph/badge.svg)](https://codecov.io/gh/mozilla/sign-addon)
 
 ## Installation
 
