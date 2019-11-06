@@ -9,3 +9,6 @@
 npm-debug.log
 node_modules
 dist/*
+
+# IDE-specific files.
+.vscode
