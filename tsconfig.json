@@ -5,6 +5,7 @@
     "esModuleInterop": true,
     "module": "commonjs",
     "moduleResolution": "node",
+    "noEmit": true,
     "strict": true,
     "target": "es2015",
     "typeRoots" : ["./node_modules/@types", "./src/@types"]
