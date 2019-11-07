@@ -16,7 +16,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "core-js": "3.3.6",
+    "core-js": "3.4.0",
     "common-tags": "1.8.0",
     "deepcopy": "2.0.0",
     "es6-error": "4.1.1",
