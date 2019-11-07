@@ -6,12 +6,14 @@ import PseudoProgress from '../src/PseudoProgress';
 
 describe(__filename, () => {
   describe('PseudoProgress', () => {
-    /** @type {sinon.SinonSpy} */
+    /** @type {sinon.SinonSpy<[NodeJS.Timeout|number|undefined], void>} */
     let _clearInterval;
-    /** @type {sinon.SinonSpy} */
+    /** @type {sinon.SinonSpy<any, any>} */
     let _setInterval;
     /** @type {PseudoProgress} */
     let progress;
+
+    const fakeIntervalId = 12345;
 
     const createFakeStdout = () => {
       return {
@@ -25,8 +27,14 @@ describe(__filename, () => {
     };
 
     beforeEach(() => {
-      _setInterval = sinon.spy(() => 'interval-id');
-      _clearInterval = sinon.spy(() => {});
+      _clearInterval = sinon.spy(
+        /**
+         * @param {NodeJS.Timeout|number|undefined} handle
+         */
+        // eslint-disable-next-line no-unused-vars
+        (handle) => {},
+      );
+      _setInterval = sinon.spy(() => fakeIntervalId);
 
       progress = new PseudoProgress({
         _clearInterval,
@@ -44,7 +52,7 @@ describe(__filename, () => {
       progress.animate();
       expect(_setInterval.called).to.be.equal(true);
       progress.finish();
-      expect(_clearInterval.firstCall.args[0]).to.be.equal('interval-id');
+      expect(_clearInterval.firstCall.args[0]).to.be.equal(fakeIntervalId);
     });
   });
 });

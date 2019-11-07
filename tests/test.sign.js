@@ -9,18 +9,30 @@ import { signAddonAndExit } from '../src';
 const testDir = path.resolve(__dirname);
 const fixturePath = path.join(testDir, 'fixtures');
 
+/**
+ * @typedef {import('../src/amo-client').ClientParams} ClientParams
+ * @typedef {import('../src/amo-client').SignParams} SignParams
+ * @typedef {import('../src/amo-client').SignResult} SignResult
+ */
+
 describe('sign', function() {
-  /** @type {sinon.SinonSpy} */
+  /** @type {sinon.SinonSpy<[number], void>} */
   let mockProcessExit;
   /** @type {typeof process} */
   let mockProcess;
-  /** @type {sinon.SinonSpy} */
+  /** @type {sinon.SinonSpy<[SignParams], Promise<SignResult>>} */
   let signingCall;
-  /** @type {sinon.SinonSpy} */
+  /** @type {sinon.SinonSpy<[ClientParams], void>} */
   let fakeClientContructor;
 
   beforeEach(function() {
-    mockProcessExit = sinon.spy(() => {});
+    mockProcessExit = sinon.spy(
+      /**
+       * @param {number} exitCode
+       */
+      // eslint-disable-next-line no-unused-vars
+      (exitCode) => {},
+    );
     mockProcess = {
       ...process,
       // `mockProcessExit` is not compatible with the type of `process.exit()`
@@ -28,7 +40,13 @@ describe('sign', function() {
       // @ts-ignore
       exit: mockProcessExit,
     };
-    fakeClientContructor = sinon.spy(() => {});
+    fakeClientContructor = sinon.spy(
+      /**
+       * @param {ClientParams} params
+       */
+      // eslint-disable-next-line no-unused-vars
+      (params) => {},
+    );
   });
 
   /**
@@ -53,7 +71,11 @@ describe('sign', function() {
       this.debug = sinon.stub();
 
       signingCall = sinon.spy(
-        () =>
+        /**
+         * @param {SignParams} params
+         */
+        // eslint-disable-next-line no-unused-vars
+        (params) =>
           new Promise((resolve) => {
             if (options.errorToThrow) {
               throw options.errorToThrow;

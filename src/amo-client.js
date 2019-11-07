@@ -57,6 +57,18 @@ import PseudoProgress from './PseudoProgress';
  */
 
 /**
+ * @typedef {object} SignParams
+ * @property {string=} guid - optional add-on GUID (ID in install.rdf)
+ * @property {string} version - add-on version string
+ * @property {ReleaseChannel=} channel - release channel (listed or unlisted)
+ * @property {string} xpiPath - path to xpi file
+ */
+
+/**
+ * @typedef {{ success: boolean, downloadedFiles?: string[], id?: string }} SignResult
+ */
+
+/**
  * Returns a nicely formatted HTTP response.
  * This makes the response suitable for logging.
  *
@@ -124,10 +136,6 @@ export class Client {
    */
 
   /**
-   * @typedef {{ success: boolean, downloadedFiles?: string[], id?: string }} SignResult
-   */
-
-  /**
    * @param {ClientParams} params
    */
   constructor({
@@ -173,12 +181,6 @@ export class Client {
 
   /**
    * Sign a new version of your add-on at addons.mozilla.org.
-   *
-   * @typedef {object} SignParams
-   * @property {string=} guid - optional add-on GUID (ID in install.rdf)
-   * @property {string} version - add-on version string
-   * @property {ReleaseChannel=} channel - release channel (listed or unlisted)
-   * @property {string} xpiPath - path to xpi file
    *
    * @param {SignParams} signParams
    * @returns {Promise<SignResult>}
@@ -227,7 +229,7 @@ export class Client {
          * @returns {Promise<SignResult>} result
          */
         ([httpResponse, body]) => {
-          const response = body || {};
+          const response = body;
 
           const acceptableStatuses = [200, 201, 202];
           const receivedError = !!response.error;
