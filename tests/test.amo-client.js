@@ -63,7 +63,7 @@ describe(__filename, () => {
         return client.waitForSignedAddon(url, options);
       };
 
-      const createValidResponse = (overrides = {}) => {
+      const createValidationResponse = (overrides = {}) => {
         const res = {
           active: false,
           automated_signing: true,
@@ -81,9 +81,9 @@ describe(__filename, () => {
         };
       };
 
-      const createSignedResponse = (overrides = {}) => {
+      const createSigningResponse = (overrides = {}) => {
         const res = {
-          ...createValidResponse().responseBody,
+          ...createValidationResponse().responseBody,
           active: true,
           reviewed: true,
           files: [
@@ -120,7 +120,7 @@ describe(__filename, () => {
           },
         };
 
-        const { files } = createSignedResponse().responseBody;
+        const { files } = createSigningResponse().responseBody;
         const fakeRequest = sinon.spy(() => fakeResponse);
         const createWriteStream = sinon.spy(() => fakeFileWriter);
         const stdout = {
@@ -292,9 +292,9 @@ describe(__filename, () => {
         ];
         client._request = new MockRequest({
           responseQueue: [
-            createValidResponse({ valid: false, processed: false }),
-            createValidResponse(),
-            createSignedResponse({ files }),
+            createValidationResponse({ valid: false, processed: false }),
+            createValidationResponse(),
+            createSigningResponse({ files }),
           ],
         });
 
@@ -319,8 +319,8 @@ describe(__filename, () => {
         client.downloadSignedFiles = downloadSignedFiles;
         client._request = new MockRequest({
           responseQueue: [
-            createValidResponse({ guid }),
-            createSignedResponse({ files, guid }),
+            createValidationResponse({ guid }),
+            createSigningResponse({ files, guid }),
           ],
         });
 
@@ -338,9 +338,9 @@ describe(__filename, () => {
           responseQueue: [
             // This is a situation where the upload has been validated but the
             // version object has not been saved yet.
-            createValidResponse({ valid: false, processed: false }),
-            createValidResponse(),
-            createSignedResponse({
+            createValidationResponse({ valid: false, processed: false }),
+            createValidationResponse(),
+            createSigningResponse({
               valid: true,
               processed: true,
               reviewed: true,
@@ -360,9 +360,9 @@ describe(__filename, () => {
         client.downloadSignedFiles = downloadSignedFiles;
         client._request = new MockRequest({
           responseQueue: [
-            createValidResponse(),
-            createSignedResponse({ files: [] }), // somehow valid & signed, but files aren"t ready yet
-            createSignedResponse(), // files are ready
+            createValidationResponse(),
+            createSigningResponse({ files: [] }), // somehow valid & signed, but files aren"t ready yet
+            createSigningResponse(), // files are ready
           ],
         });
 
@@ -376,8 +376,8 @@ describe(__filename, () => {
       it('waits for failing validation', function() {
         client._request = new MockRequest({
           responseQueue: [
-            createValidResponse({ valid: false, processed: false }),
-            createValidResponse({ valid: false, processed: true }),
+            createValidationResponse({ valid: false, processed: false }),
+            createValidationResponse({ valid: false, processed: true }),
           ],
         });
 
@@ -406,8 +406,8 @@ describe(__filename, () => {
       it('handles complete yet inactive addons', function() {
         client._request = new MockRequest({
           responseQueue: [
-            createValidResponse(),
-            createSignedResponse({
+            createValidationResponse(),
+            createSigningResponse({
               valid: true,
               processed: true,
               automated_signing: false,
@@ -434,6 +434,9 @@ describe(__filename, () => {
               return 'status-check-timeout-id';
             },
           })
+          .then(() => {
+            throw new Error('Unexpected success');
+          })
           .catch((error) => {
             expect(error.message).to.contain('Signing took too long');
           });
@@ -452,13 +455,16 @@ describe(__filename, () => {
 
         _client._request = new MockRequest({
           responseQueue: [
-            createValidResponse(),
-            createSignedResponse({ active: false }),
+            createValidationResponse(),
+            createSigningResponse({ active: false }),
           ],
         });
 
         await _client
           .waitForSignedAddon('/status-url')
+          .then(() => {
+            throw new Error('Unexpected success');
+          })
           .catch((error) =>
             expect(error.message).to.include('Signing took too long'),
           );
@@ -491,7 +497,7 @@ describe(__filename, () => {
       it('clears abort timeout after resolution', async () => {
         const _clearTimeout = sinon.stub();
         client._request = new MockRequest({
-          responseQueue: [createValidResponse(), createSignedResponse()],
+          responseQueue: [createValidationResponse(), createSigningResponse()],
         });
 
         const downloadSignedFiles = sinon.spy(() => Promise.resolve({}));
@@ -532,7 +538,7 @@ describe(__filename, () => {
           },
         };
 
-        const { files } = createSignedResponse().responseBody;
+        const { files } = createSigningResponse().responseBody;
         const fakeRequest = sinon.spy(() => fakeResponse);
         const createWriteStream = sinon.spy(() => fakeFileWriter);
 
@@ -575,7 +581,7 @@ describe(__filename, () => {
           },
         };
 
-        const { files } = createSignedResponse().responseBody;
+        const { files } = createSigningResponse().responseBody;
         const fakeRequest = sinon.spy(() => fakeResponse);
         const { createWriteStream } = getDownloadStubs();
 
@@ -615,7 +621,7 @@ describe(__filename, () => {
       });
 
       it('fails for unsigned files', function() {
-        let { files } = createSignedResponse().responseBody;
+        let { files } = createSigningResponse().responseBody;
         files = files.map(function(fileOb) {
           return {
             ...fileOb,
@@ -687,7 +693,7 @@ describe(__filename, () => {
         it('rejects when there is an error in checkSignedStatus', async () => {
           const responseError = new Error('some error');
           client._request = new MockRequest({
-            responseQueue: [createValidResponse(), { responseError }],
+            responseQueue: [createValidationResponse(), { responseError }],
           });
 
           try {

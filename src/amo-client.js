@@ -352,6 +352,7 @@ export class Client {
             );
           }
         } catch (err) {
+          _clearTimeout(abortTimeout);
           reject(err);
         }
       };
@@ -382,6 +383,7 @@ export class Client {
                 'Your add-on failed validation and could not be signed',
               );
 
+              _clearTimeout(abortTimeout);
               resolve({ success: false });
             }
           } else {
@@ -392,6 +394,7 @@ export class Client {
             );
           }
         } catch (err) {
+          _clearTimeout(abortTimeout);
           reject(err);
         }
       };
