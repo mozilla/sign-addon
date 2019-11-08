@@ -33,10 +33,9 @@ describe(__filename, () => {
         apiSecret: 'fake-api-secret',
         apiUrlPrefix: defaultApiUrlPrefix,
         fs: createFakeFS(),
+        progressBar: new MockProgress(),
         request: new MockRequest(),
-        signingProgress: new MockProgress(),
         statusCheckInterval: 0,
-        validateProgress: new MockProgress(),
         ...overrides,
       };
 
@@ -436,7 +435,7 @@ describe(__filename, () => {
             },
           })
           .catch((error) => {
-            expect(error.message).to.contain('Validation took too long');
+            expect(error.message).to.contain('Signing took too long');
           });
 
         expect(_clearTimeout.firstCall.args[0]).to.be.equal(
@@ -489,7 +488,7 @@ describe(__filename, () => {
         expect(conf.strictSSL).to.be.equal(requestConfig.strictSSL);
       });
 
-      it('clears abort timeouts after resolution', async () => {
+      it('clears abort timeout after resolution', async () => {
         const _clearTimeout = sinon.stub();
         client._request = new MockRequest({
           responseQueue: [createValidResponse(), createSignedResponse()],
@@ -500,11 +499,8 @@ describe(__filename, () => {
 
         await waitForSignedAddon('/status-url', {
           _clearTimeout,
-          _setAbortValidationTimeout() {
-            return 'abort-validation-timeout-id';
-          },
-          _setAbortSigningTimeout() {
-            return 'abort-signing-timeout-id';
+          _setAbortTimeout() {
+            return 'abort-timeout-id';
           },
           _setStatusCheckTimeout() {
             return 'status-check-timeout-id';
@@ -513,12 +509,7 @@ describe(__filename, () => {
 
         // Assert that signing resolved successfully.
         expect(downloadSignedFiles.called).to.be.equal(true);
-        expect(_clearTimeout.firstCall.args[0]).to.be.equal(
-          'abort-validation-timeout-id',
-        );
-        expect(_clearTimeout.secondCall.args[0]).to.be.equal(
-          'abort-signing-timeout-id',
-        );
+        expect(_clearTimeout.firstCall.args[0]).to.be.equal('abort-timeout-id');
       });
 
       it('downloads signed files', function() {

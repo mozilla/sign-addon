@@ -53,8 +53,7 @@ import PseudoProgress from './PseudoProgress';
  * @property {typeof defaultRequest=} request
  * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
  * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
- * @property {PseudoProgress=} validateProgress
- * @property {PseudoProgress=} signingProgress
+ * @property {PseudoProgress=} progressBar
  */
 
 /**
@@ -156,8 +155,7 @@ export class Client {
     request = defaultRequest,
     proxyServer,
     requestConfig,
-    validateProgress,
-    signingProgress,
+    progressBar,
   }) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
@@ -172,15 +170,10 @@ export class Client {
     this.requestConfig = requestConfig || {};
 
     // Set up external dependencies, allowing for overrides.
-    this._validateProgress =
-      validateProgress ||
+    this._progressBar =
+      progressBar ||
       new PseudoProgress({
         preamble: 'Validating add-on',
-      });
-    this._signingProgress =
-      signingProgress ||
-      new PseudoProgress({
-        preamble: 'Signing add-on',
       });
     this._fs = fs;
     this._request = request;
@@ -272,8 +265,7 @@ export class Client {
    *
    * @typedef {object} WaitForSignedAddonParams
    * @property {typeof clearTimeout=} _clearTimeout
-   * @property {typeof setTimeout=} _setAbortSigningTimeout
-   * @property {typeof setTimeout=} _setAbortValidationTimeout
+   * @property {typeof setTimeout=} _setAbortTimeout
    * @property {typeof setTimeout=} _setStatusCheckTimeout
    *
    * @param {string} statusUrl - URL to GET for add-on status
@@ -284,29 +276,24 @@ export class Client {
     statusUrl,
     {
       _clearTimeout = clearTimeout,
-      _setAbortSigningTimeout = setTimeout,
-      _setAbortValidationTimeout = setTimeout,
+      _setAbortTimeout = setTimeout,
       _setStatusCheckTimeout = setTimeout,
     } = {},
   ) {
     /** @type {SigningStatus=} */
     let lastStatus;
 
-    const startTime = Date.now();
-
     return new Promise((resolve, reject) => {
-      /** @type {NodeJS.Timer} */
-      let abortTimeout;
       /** @type {NodeJS.Timer} */
       let statusCheckTimeout;
 
-      // Setup a function to abort the "validation" step.
-      abortTimeout = _setAbortValidationTimeout(() => {
-        this._validateProgress.finish();
+      /** @type {NodeJS.Timer} */
+      const abortTimeout = _setAbortTimeout(() => {
+        this._progressBar.finish();
         _clearTimeout(statusCheckTimeout);
 
         reject(
-          new Error(oneLine`Validation took too long to complete; last status:
+          new Error(oneLine`Signing took too long to complete; last status:
             ${formatResponse(lastStatus || '[null]')}`),
         );
       }, this.statusCheckTimeout);
@@ -339,7 +326,7 @@ export class Client {
           const requiresManualReview = status.valid && !canBeAutoSigned;
 
           if (signedAndReady || requiresManualReview) {
-            this._signingProgress.finish();
+            this._progressBar.finish();
             _clearTimeout(abortTimeout);
 
             if (requiresManualReview) {
@@ -355,7 +342,7 @@ export class Client {
               // TODO: show some validation warnings if there are any. We should
               // show things like "missing update URL in manifest"
               const result = await this.downloadSignedFiles(status.files);
-              resolve({ id: status.guid, ...result });
+              resolve({ success: true, id: status.guid, ...result });
             }
           } else {
             // The add-on has not been fully processed yet.
@@ -382,34 +369,13 @@ export class Client {
           lastStatus = status;
 
           if (status.processed) {
-            // Validation completed.
-            this._validateProgress.finish();
-            _clearTimeout(abortTimeout);
+            this._progressBar.finish();
             this.logger.log('Validation results:', status.validation_url);
+            // Update pseudo progress preamble for the signing step.
+            this._progressBar.setPreamble('Signing add-on');
+            this._progressBar.animate();
 
             if (status.valid) {
-              // Start checking for signed files - same API call, same polling
-              // method, but we're looking for something different in the
-              // response.
-              // FIXME: we might already have all the info we need and in that
-              // case polling the API another time is useless.
-              this._signingProgress.animate();
-
-              // Now, setup a function to abort the "signing" step. We
-              // substract the elapsed time from `statusCheckTimeout`.
-              const elaspedTimeInSeconds = Math.round(
-                (Date.now() - startTime) / 1000,
-              );
-              abortTimeout = _setAbortSigningTimeout(() => {
-                this._signingProgress.finish();
-                _clearTimeout(statusCheckTimeout);
-
-                reject(
-                  new Error(oneLine`Signing took too long to complete; last
-                    status: ${formatResponse(lastStatus || '[null]')}`),
-                );
-              }, this.statusCheckTimeout - elaspedTimeInSeconds);
-
               checkSignedStatus();
             } else {
               this.logger.log(
@@ -431,6 +397,7 @@ export class Client {
       };
 
       // Goooo
+      this._progressBar.animate();
       checkValidationStatus();
     });
   }

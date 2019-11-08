@@ -3,6 +3,8 @@
 export class MockProgress {
   animate() {}
 
+  setPreamble() {}
+
   finish() {}
 }
 

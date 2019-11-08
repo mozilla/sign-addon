@@ -29,25 +29,36 @@ class PseudoProgress {
     preamble = '',
     stdout = process.stdout,
   } = {}) {
-    /** @type {string[]} */
-    this.bucket = [];
     this.interval = null;
     this.motionCounter = 1;
 
-    this.preamble = preamble;
-    this.preamble += ' [';
-    this.addendum = ']';
     this.setInterval = _setInterval;
     this.clearInterval = _clearInterval;
     this.stdout = stdout;
+
+    /** @type {string[]} */
+    this.bucket = [];
+    /** @type {number[]} */
+    this.emptyBucketPointers = [];
+
+    this.setPreamble(preamble);
+  }
+
+  /**
+   * @param {string} preamble
+   */
+  setPreamble(preamble) {
+    this.preamble = `${preamble} [`;
+    this.addendum = ']';
 
     let shellWidth = 80;
     if (this.stdout.isTTY) {
       shellWidth = Number(this.stdout.columns);
     }
 
-    /** @type {number[]} */
     this.emptyBucketPointers = [];
+    this.bucket = [];
+
     const bucketSize = shellWidth - this.preamble.length - this.addendum.length;
     for (let i = 0; i < bucketSize; i++) {
       this.bucket.push(' ');
