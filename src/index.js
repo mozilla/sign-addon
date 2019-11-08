@@ -17,7 +17,7 @@ import { Client as DefaultAMOClient } from './amo-client';
  * @property {ClientParams['apiJwtExpiresIn']=} apiJwtExpiresIn
  * @property {ClientParams['debugLogging']=} verbose
  * @property {ReleaseChannel=} channel
- * @property {ClientParams['signedStatusCheckTimeout']=} timeout
+ * @property {ClientParams['statusCheckTimeout']=} timeout
  * @property {ClientParams['downloadDir']=} downloadDir
  * @property {ClientParams['proxyServer']=} apiProxy
  * @property {ClientParams['requestConfig']=} apiRequestConfig
@@ -99,7 +99,7 @@ const signAddon = async ({
     apiJwtExpiresIn,
     downloadDir,
     debugLogging: verbose,
-    signedStatusCheckTimeout: timeout,
+    statusCheckTimeout: timeout,
     proxyServer: apiProxy,
     requestConfig: apiRequestConfig,
   });

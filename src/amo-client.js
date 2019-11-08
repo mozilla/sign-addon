@@ -45,15 +45,15 @@ import PseudoProgress from './PseudoProgress';
  * @property {string} apiUrlPrefix - API URL prefix, including any leading paths
  * @property {number=} apiJwtExpiresIn - Number of seconds until the JWT token for the API request expires. This must match the expiration time that the API server accepts
  * @property {boolean=} debugLogging - When true, log more information
- * @property {number=} signedStatusCheckInterval - A period in millesconds between checks when waiting on add-on signing
- * @property {number=} signedStatusCheckTimeout -  A length in millesconds to give up if the add-on hasn't been signed
+ * @property {number=} statusCheckInterval - A period in millesconds between checks when waiting on add-on status
+ * @property {number=} statusCheckTimeout -  A length in millesconds to give up if the add-on hasn't been validated and signed
  * @property {typeof console=} logger
  * @property {string=} downloadDir - Absolute path to save downloaded files to. The working directory will be used by default
  * @property {typeof defaultFs=} fs
  * @property {typeof defaultRequest=} request
  * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
  * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
- * @property {PseudoProgress=} validateProgress
+ * @property {PseudoProgress=} progressBar
  */
 
 /**
@@ -147,22 +147,22 @@ export class Client {
     // https://github.com/mozilla/addons-server/issues/3688
     apiJwtExpiresIn = 60 * 5, // 5 minutes
     debugLogging = false,
-    signedStatusCheckInterval = 1000,
-    signedStatusCheckTimeout = 900000, // 15 minutes.
+    statusCheckInterval = 1000,
+    statusCheckTimeout = 900000, // 15 minutes.
     logger = console,
     downloadDir = process.cwd(),
     fs = defaultFs,
     request = defaultRequest,
     proxyServer,
     requestConfig,
-    validateProgress,
+    progressBar,
   }) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
     this.apiUrlPrefix = apiUrlPrefix; // default set in CLI options.
     this.apiJwtExpiresIn = apiJwtExpiresIn;
-    this.signedStatusCheckInterval = signedStatusCheckInterval;
-    this.signedStatusCheckTimeout = signedStatusCheckTimeout;
+    this.statusCheckInterval = statusCheckInterval;
+    this.statusCheckTimeout = statusCheckTimeout;
     this.debugLogging = debugLogging;
     this.logger = logger;
     this.downloadDir = downloadDir;
@@ -170,8 +170,8 @@ export class Client {
     this.requestConfig = requestConfig || {};
 
     // Set up external dependencies, allowing for overrides.
-    this._validateProgress =
-      validateProgress ||
+    this._progressBar =
+      progressBar ||
       new PseudoProgress({
         preamble: 'Validating add-on',
       });
@@ -267,7 +267,6 @@ export class Client {
    * @property {typeof clearTimeout=} _clearTimeout
    * @property {typeof setTimeout=} _setAbortTimeout
    * @property {typeof setTimeout=} _setStatusCheckTimeout
-   * @property {number=} abortAfter
    *
    * @param {string} statusUrl - URL to GET for add-on status
    * @param {WaitForSignedAddonParams} options
@@ -279,106 +278,130 @@ export class Client {
       _clearTimeout = clearTimeout,
       _setAbortTimeout = setTimeout,
       _setStatusCheckTimeout = setTimeout,
-      abortAfter = this.signedStatusCheckTimeout,
     } = {},
   ) {
     /** @type {SigningStatus=} */
-    let lastStatusResponse;
+    let lastStatus;
 
     return new Promise((resolve, reject) => {
       /** @type {NodeJS.Timer} */
-      let abortTimeout;
-      /** @type {NodeJS.Timer} */
       let statusCheckTimeout;
 
+      /** @type {NodeJS.Timer} */
+      const abortTimeout = _setAbortTimeout(() => {
+        this._progressBar.finish();
+        _clearTimeout(statusCheckTimeout);
+
+        reject(
+          new Error(oneLine`Signing took too long to complete; last status:
+            ${formatResponse(lastStatus || '[null]')}`),
+        );
+      }, this.statusCheckTimeout);
+
+      // This function polls the API until the add-on is signed or requires
+      // manual review. If the add-on is signed, we download the signed files.
+      //
+      // This function resolves the main `Promise` in both cases.
       const checkSignedStatus = async () => {
         try {
-          // eslint-disable-next-line no-unused-vars
-          const [httpResponse, data] = await this.get({ url: statusUrl });
-          lastStatusResponse = data;
+          const [
+            // eslint-disable-next-line no-unused-vars
+            httpResponse,
+            status,
+          ] = await this.get({ url: statusUrl });
+          lastStatus = status;
 
-          // TODO: remove this when the API has been fully deployed with this
-          // change: https://github.com/mozilla/olympia/pull/1041
-          const apiReportsAutoSigning =
-            typeof data.automated_signing !== 'undefined';
-
-          const canBeAutoSigned = data.automated_signing;
-          const failedValidation = !data.valid;
+          const canBeAutoSigned = status.automated_signing;
           // The add-on passed validation and all files have been created. There
           // are many checks for this state because the data will be updated
           // incrementally by the API server.
           const signedAndReady =
-            data.valid &&
-            data.active &&
-            data.reviewed &&
-            data.files &&
-            data.files.length > 0;
-          // The add-on is valid but requires a manual review before it can
-          // be signed.
-          const requiresManualReview =
-            data.valid && apiReportsAutoSigning && !canBeAutoSigned;
+            status.valid &&
+            status.active &&
+            status.reviewed &&
+            status.files &&
+            status.files.length > 0;
+          // The add-on is valid but requires a manual review before it can be
+          // signed.
+          const requiresManualReview = status.valid && !canBeAutoSigned;
 
-          if (
-            data.processed &&
-            (failedValidation || signedAndReady || requiresManualReview)
-          ) {
-            this._validateProgress.finish();
+          if (signedAndReady || requiresManualReview) {
+            this._progressBar.finish();
             _clearTimeout(abortTimeout);
-            this.logger.log('Validation results:', data.validation_url);
 
             if (requiresManualReview) {
-              this.logger.log(
-                'Your add-on has been submitted for review. It passed ' +
-                  'validation but could not be automatically signed ' +
-                  'because this is a listed add-on.',
-              );
+              this.logger.log(oneLine`Your add-on has been submitted for review.
+              It passed validation but could not be automatically signed
+              because this is a listed add-on.`);
 
               resolve({ success: false });
               return;
             }
 
             if (signedAndReady) {
-              // TODO: show some validation warnings if there are any.
-              // We should show things like "missing update URL in manifest"
-              const result = await this.downloadSignedFiles(data.files);
-
-              resolve({ id: data.guid, ...result });
-              return;
+              // TODO: show some validation warnings if there are any. We should
+              // show things like "missing update URL in manifest"
+              const result = await this.downloadSignedFiles(status.files);
+              resolve({ success: true, id: status.guid, ...result });
             }
-
-            this.logger.log(
-              'Your add-on failed validation and could not be signed',
+          } else {
+            // The add-on has not been fully processed yet.
+            statusCheckTimeout = _setStatusCheckTimeout(
+              checkSignedStatus,
+              this.statusCheckInterval,
             );
-
-            resolve({ success: false });
-            return;
           }
-          // The add-on has not been fully processed yet.
-          statusCheckTimeout = _setStatusCheckTimeout(
-            checkSignedStatus,
-            this.signedStatusCheckInterval,
-          );
         } catch (err) {
+          _clearTimeout(abortTimeout);
           reject(err);
         }
       };
 
-      abortTimeout = _setAbortTimeout(() => {
-        this._validateProgress.finish();
-        _clearTimeout(statusCheckTimeout);
+      // This function polls the API until the add-on is processed/validated.
+      // This function only rejects when the add-on is not valid. When the
+      // add-on is valid, we call `checkSignedStatus()`.
+      const checkValidationStatus = async () => {
+        try {
+          const [
+            // eslint-disable-next-line no-unused-vars
+            httpResponse,
+            status,
+          ] = await this.get({ url: statusUrl });
+          lastStatus = status;
 
-        reject(
-          new Error(
-            `Validation took too long to complete; last status: ${formatResponse(
-              lastStatusResponse || '[null]',
-            )}`,
-          ),
-        );
-      }, abortAfter);
+          if (status.processed) {
+            this._progressBar.finish();
+            this.logger.log('Validation results:', status.validation_url);
+            // Update pseudo progress preamble for the signing step.
+            this._progressBar.setPreamble('Signing add-on');
+            this._progressBar.animate();
 
-      // Start checking the status.
-      this._validateProgress.animate();
-      checkSignedStatus();
+            if (status.valid) {
+              checkSignedStatus();
+            } else {
+              this.logger.log(
+                'Your add-on failed validation and could not be signed',
+              );
+
+              _clearTimeout(abortTimeout);
+              resolve({ success: false });
+            }
+          } else {
+            // Validation is not completed yet.
+            statusCheckTimeout = _setStatusCheckTimeout(
+              checkValidationStatus,
+              this.statusCheckInterval,
+            );
+          }
+        } catch (err) {
+          _clearTimeout(abortTimeout);
+          reject(err);
+        }
+      };
+
+      // Goooo
+      this._progressBar.animate();
+      checkValidationStatus();
     });
   }
 
