@@ -45,7 +45,7 @@
     "babel-loader": "8.0.6",
     "chai": "4.2.0",
     "codecov": "3.6.1",
-    "conventional-changelog-cli": "2.0.25",
+    "conventional-changelog-cli": "2.0.27",
     "eslint": "6.6.0",
     "eslint-config-amo": "1.26.0",
     "eslint-config-prettier": "6.5.0",
