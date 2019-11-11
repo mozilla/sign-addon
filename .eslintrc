@@ -12,7 +12,8 @@
   "extends": [
     "amo",
     "prettier",
-    "prettier/@typescript-eslint"
+    "prettier/@typescript-eslint",
+    "plugin:jest/recommended"
   ],
   "rules": {
     "import/no-extraneous-dependencies": ["error", {
