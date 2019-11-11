@@ -1,14 +1,10 @@
-import sinon from 'sinon';
-import { beforeEach, describe, it } from 'mocha';
-import { expect } from 'chai';
-
 import PseudoProgress from '../src/PseudoProgress';
 
 describe(__filename, () => {
   describe('PseudoProgress', () => {
-    /** @type {sinon.SinonSpy<[NodeJS.Timeout|number|undefined], void>} */
+    /** @type {typeof clearInterval} */
     let _clearInterval;
-    /** @type {sinon.SinonSpy<any, any>} */
+    /** @type {typeof setInterval} */
     let _setInterval;
     /** @type {PseudoProgress} */
     let progress;
@@ -27,14 +23,8 @@ describe(__filename, () => {
     };
 
     beforeEach(() => {
-      _clearInterval = sinon.spy(
-        /**
-         * @param {NodeJS.Timeout|number|undefined} handle
-         */
-        // eslint-disable-next-line no-unused-vars
-        (handle) => {},
-      );
-      _setInterval = sinon.spy(() => fakeIntervalId);
+      _clearInterval = jest.fn();
+      _setInterval = jest.fn().mockReturnValue(fakeIntervalId);
 
       progress = new PseudoProgress({
         _clearInterval,
@@ -45,14 +35,14 @@ describe(__filename, () => {
 
     it('should set an interval', function() {
       progress.animate();
-      expect(_setInterval.called).to.be.equal(true);
+      expect(_setInterval).toHaveBeenCalled();
     });
 
     it('should clear an interval', function() {
       progress.animate();
-      expect(_setInterval.called).to.be.equal(true);
+      expect(_setInterval).toHaveBeenCalled();
       progress.finish();
-      expect(_clearInterval.firstCall.args[0]).to.be.equal(fakeIntervalId);
+      expect(_clearInterval).toHaveBeenCalledWith(fakeIntervalId);
     });
   });
 });
