@@ -698,7 +698,11 @@ describe(__filename, () => {
             responseQueue: [createValidationResponse(), { responseError }],
           });
 
-          await expect(waitForSignedAddon()).rejects.toThrow(responseError);
+          await expect(
+            waitForSignedAddon().then(() => {
+              throw new Error('Unexpected success');
+            }),
+          ).rejects.toThrow(responseError);
         });
       });
     });
