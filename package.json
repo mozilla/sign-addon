@@ -35,7 +35,7 @@
     "@commitlint/cli": "8.2.0",
     "@commitlint/config-conventional": "8.2.0",
     "@types/common-tags": "1.8.0",
-    "@types/jest": "24.0.22",
+    "@types/jest": "24.0.23",
     "@types/jsonwebtoken": "8.3.5",
     "@types/mz": "0.0.32",
     "@types/request": "2.48.3",
