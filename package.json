@@ -43,7 +43,7 @@
     "babel-jest": "24.9.0",
     "babel-loader": "8.0.6",
     "codecov": "3.6.1",
-    "conventional-changelog-cli": "2.0.27",
+    "conventional-changelog-cli": "2.0.28",
     "eslint": "6.6.0",
     "eslint-config-amo": "1.27.0",
     "eslint-config-prettier": "6.6.0",
