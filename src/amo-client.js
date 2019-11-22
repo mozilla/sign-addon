@@ -71,7 +71,7 @@ import PseudoProgress from './PseudoProgress';
 /**
  * @typedef {{
  *   success: boolean,
- *   id: ?string,
+ *   id: string | null,
  *   downloadedFiles: ?string[],
  *   errorCode: ?SignErrorCode,
  *   errorDetails: ?string
@@ -364,8 +364,7 @@ export class Client {
               // TODO: show some validation warnings if there are any. We should
               // show things like "missing update URL in manifest"
               const result = await this.downloadSignedFiles(status.files);
-              result.id = status.guid;
-              resolve(result);
+              resolve({ ...result, id: status.guid });
             }
           } else {
             // The add-on has not been fully processed yet.
@@ -649,7 +648,7 @@ export class Client {
   }
 
   /**
-   * Confgures a request with defaults such as authentication headers.
+   * Configures a request with defaults such as authentication headers.
    *
    * @param {RequestConfig} config - as accepted by the `request` module
    * @param {{ jwt?: typeof defaultJwt}} options
