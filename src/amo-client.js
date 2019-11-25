@@ -72,9 +72,9 @@ import PseudoProgress from './PseudoProgress';
  * @typedef {{
  *   success: boolean,
  *   id: string | null,
- *   downloadedFiles: ?string[],
- *   errorCode: ?SignErrorCode,
- *   errorDetails: ?string
+ *   downloadedFiles: string[] | null,
+ *   errorCode: SignErrorCode | null,
+ *   errorDetails: string | null
  * }} SignResult
  */
 
@@ -406,6 +406,7 @@ export class Client {
               );
 
               _clearTimeout(abortTimeout);
+
               resolve({
                 success: false,
                 id: null,
