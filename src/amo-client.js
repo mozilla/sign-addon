@@ -65,7 +65,17 @@ import PseudoProgress from './PseudoProgress';
  */
 
 /**
- * @typedef {{ success: boolean, downloadedFiles?: string[], id?: string }} SignResult
+ * @typedef {("SERVER_FAILURE"|"ADDON_NOT_AUTO_SIGNED"|"VALIDATION_FAILED")} SignErrorCode
+ */
+
+/**
+ * @typedef {{
+ *   success: boolean,
+ *   id: string | null,
+ *   downloadedFiles: string[] | null,
+ *   errorCode: SignErrorCode | null,
+ *   errorDetails: string | null
+ * }} SignResult
  */
 
 /**
@@ -242,7 +252,13 @@ export class Client {
                 `Server response: ${response.error}`,
                 `(status: ${httpResponse.statusCode})`,
               );
-              return Promise.resolve({ success: false });
+              return Promise.resolve({
+                success: false,
+                id: null,
+                downloadedFiles: null,
+                errorCode: 'SERVER_FAILURE',
+                errorDetails: response.error,
+              });
             }
 
             throw new Error(
@@ -334,7 +350,13 @@ export class Client {
               It passed validation but could not be automatically signed
               because this is a listed add-on.`);
 
-              resolve({ success: false });
+              resolve({
+                success: false,
+                id: null,
+                downloadedFiles: null,
+                errorCode: 'ADDON_NOT_AUTO_SIGNED',
+                errorDetails: null,
+              });
               return;
             }
 
@@ -342,7 +364,7 @@ export class Client {
               // TODO: show some validation warnings if there are any. We should
               // show things like "missing update URL in manifest"
               const result = await this.downloadSignedFiles(status.files);
-              resolve({ success: true, id: status.guid, ...result });
+              resolve({ ...result, id: status.guid });
             }
           } else {
             // The add-on has not been fully processed yet.
@@ -384,7 +406,14 @@ export class Client {
               );
 
               _clearTimeout(abortTimeout);
-              resolve({ success: false });
+
+              resolve({
+                success: false,
+                id: null,
+                downloadedFiles: null,
+                errorCode: 'VALIDATION_FAILED',
+                errorDetails: status.validation_url,
+              });
             }
           } else {
             // Validation is not completed yet.
@@ -541,7 +570,13 @@ export class Client {
       this.logger.log(`    ${fileName.replace(process.cwd(), '.')}`);
     });
 
-    return { success: true, downloadedFiles };
+    return {
+      success: true,
+      id: null,
+      downloadedFiles,
+      errorCode: null,
+      errorDetails: null,
+    };
   }
 
   /**
