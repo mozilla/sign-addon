@@ -1,4 +1,4 @@
-import fs from 'mz/fs';
+import { fs } from 'mz';
 
 import { Client as DefaultAMOClient } from './amo-client';
 
