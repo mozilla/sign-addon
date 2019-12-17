@@ -38,7 +38,7 @@
     "@types/jest": "24.0.23",
     "@types/jsonwebtoken": "8.3.5",
     "@types/mz": "2.7.0",
-    "@types/request": "2.48.3",
+    "@types/request": "2.48.4",
     "babel-eslint": "10.0.3",
     "babel-jest": "24.9.0",
     "babel-loader": "8.0.6",
