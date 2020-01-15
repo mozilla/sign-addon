@@ -1,19 +1,7 @@
 const path = require('path');
-const fs = require('fs');
 
 const webpack = require('webpack');
-
-const nodeModules = {};
-
-// This is to filter out node_modules as we don't want them
-// to be made part of any bundles.
-fs.readdirSync('node_modules')
-  .filter(function(x) {
-    return ['.bin'].indexOf(x) === -1;
-  })
-  .forEach(function(mod) {
-    nodeModules[mod] = `commonjs ${mod}`;
-  });
+const nodeExternals = require('webpack-node-externals');
 
 module.exports = {
   entry: './src/index.js',
@@ -39,7 +27,11 @@ module.exports = {
       },
     ],
   },
-  externals: nodeModules,
+  externals: [
+    nodeExternals({
+      modulesFromFile: true,
+    }),
+  ],
   plugins: [
     // for when: https://github.com/webpack/webpack/issues/353
     new webpack.IgnorePlugin({
