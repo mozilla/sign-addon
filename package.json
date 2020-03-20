@@ -34,9 +34,9 @@
     "stream-to-promise": "2.2.0"
   },
   "devDependencies": {
-    "@babel/core": "7.8.7",
-    "@babel/preset-env": "7.8.7",
-    "@babel/register": "7.8.6",
+    "@babel/core": "7.9.0",
+    "@babel/preset-env": "7.9.0",
+    "@babel/register": "7.9.0",
     "@commitlint/cli": "8.3.5",
     "@commitlint/config-conventional": "8.3.4",
     "@types/common-tags": "1.8.0",
@@ -46,7 +46,7 @@
     "@types/request": "2.48.4",
     "babel-eslint": "10.1.0",
     "babel-jest": "25.1.0",
-    "babel-loader": "8.0.6",
+    "babel-loader": "8.1.0",
     "codecov": "3.6.5",
     "conventional-changelog-cli": "2.0.31",
     "eslint": "6.8.0",
