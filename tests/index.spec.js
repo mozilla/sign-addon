@@ -12,7 +12,7 @@ const fixturePath = path.join(testDir, 'fixtures');
  */
 
 describe(__filename, () => {
-  describe('signAddonAndExit', function() {
+  describe('signAddonAndExit', function () {
     /**
      * We use `any` instead of `never` because we cannot mock `never`.
      * @type {(statusCode: number) => any}
@@ -25,7 +25,7 @@ describe(__filename, () => {
     /** @type {(params: ClientParams) => void} */
     let fakeClientContructor;
 
-    beforeEach(function() {
+    beforeEach(function () {
       mockProcessExit = jest.fn();
       mockProcess = {
         ...process,
@@ -113,7 +113,7 @@ describe(__filename, () => {
     }
 
     it('should exit 0 on signing success', () => {
-      return runSignCmd({ throwError: false }).then(function() {
+      return runSignCmd({ throwError: false }).then(function () {
         expect(signingCall).toHaveBeenCalled();
         expect(mockProcessExit).toHaveBeenCalledWith(0);
       });

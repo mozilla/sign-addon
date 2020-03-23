@@ -38,7 +38,7 @@ describe(__filename, () => {
       return new amoClient.Client(opt);
     };
 
-    describe('signing', function() {
+    describe('signing', function () {
       let client;
 
       beforeEach(() => {
@@ -243,7 +243,7 @@ describe(__filename, () => {
         expect(result.errorDetails).toEqual('version already exists');
       });
 
-      it('handles incorrect status code for error responses', function() {
+      it('handles incorrect status code for error responses', function () {
         client.waitForSignedAddon = () => {};
 
         client._request = new MockRequest({
@@ -260,16 +260,16 @@ describe(__filename, () => {
         });
       });
 
-      it('throws an error when signing on a 500 server response', function() {
+      it('throws an error when signing on a 500 server response', function () {
         client._request = new MockRequest({
           httpResponse: { statusCode: 500 },
         });
 
         return sign()
-          .then(function() {
+          .then(function () {
             throw new Error('unexpected success');
           })
-          .catch(function(err) {
+          .catch(function (err) {
             expect(err.message).toContain('Received bad response');
           });
       });
@@ -376,7 +376,7 @@ describe(__filename, () => {
         expect(downloadSignedFiles).toHaveBeenCalled();
       });
 
-      it('waits for failing validation', function() {
+      it('waits for failing validation', function () {
         client._request = new MockRequest({
           responseQueue: [
             createValidationResponse({ valid: false, processed: false }),
@@ -397,7 +397,7 @@ describe(__filename, () => {
         });
       });
 
-      it('passes through status check request errors', function() {
+      it('passes through status check request errors', function () {
         client._request = new MockRequest({
           httpResponse: { statusCode: 500 },
           responseError: new Error('error from status check URL'),
@@ -412,7 +412,7 @@ describe(__filename, () => {
           });
       });
 
-      it('handles complete yet inactive addons', function() {
+      it('handles complete yet inactive addons', function () {
         client._request = new MockRequest({
           responseQueue: [
             createValidationResponse(),
@@ -424,7 +424,7 @@ describe(__filename, () => {
           ],
         });
 
-        return waitForSignedAddon().then(function(result) {
+        return waitForSignedAddon().then(function (result) {
           expect(result.success).toEqual(false);
           expect(result.errorCode).toEqual('ADDON_NOT_AUTO_SIGNED');
         });
@@ -478,7 +478,7 @@ describe(__filename, () => {
           );
       });
 
-      it('can use a request proxy', function() {
+      it('can use a request proxy', function () {
         const proxyServer = 'http://yourproxy:6000';
         const _client = createClient({ proxyServer });
 
@@ -487,7 +487,7 @@ describe(__filename, () => {
         expect(conf.proxy).toEqual(proxyServer);
       });
 
-      it('can arbitrarily configure the request', function() {
+      it('can arbitrarily configure the request', function () {
         const requestConfig = {
           url: 'http://this-is-ignored',
           tunnel: true,
@@ -528,7 +528,7 @@ describe(__filename, () => {
         expect(_clearTimeout).toHaveBeenCalledWith('abort-timeout-id');
       });
 
-      it('downloads signed files', function() {
+      it('downloads signed files', function () {
         const fakeResponse = {
           on() {
             return this;
@@ -560,7 +560,7 @@ describe(__filename, () => {
               write() {},
             },
           })
-          .then(function(result) {
+          .then(function (result) {
             const filePath = path.join(
               process.cwd(),
               'some-signed-file-1.2.3.xpi',
@@ -576,7 +576,7 @@ describe(__filename, () => {
           });
       });
 
-      it('fails for 404 signed file downloads', function() {
+      it('fails for 404 signed file downloads', function () {
         const fakeResponse = {
           on(event, handler) {
             if (event === 'response') {
@@ -619,7 +619,7 @@ describe(__filename, () => {
           );
       });
 
-      it('configures a download destination in the contructor', function() {
+      it('configures a download destination in the contructor', function () {
         const downloadDir = '/some/fake/destination-dir/';
         const _client = createClient({ downloadDir });
         const stubs = getDownloadStubs();
@@ -630,9 +630,9 @@ describe(__filename, () => {
         });
       });
 
-      it('fails for unsigned files', function() {
+      it('fails for unsigned files', function () {
         let { files } = createSigningResponse().responseBody;
-        files = files.map(function(fileOb) {
+        files = files.map(function (fileOb) {
           return {
             ...fileOb,
             // This can happen for certain invalid XPIs.
@@ -643,16 +643,16 @@ describe(__filename, () => {
 
         return client
           .downloadSignedFiles(files, stubs)
-          .then(function() {
+          .then(function () {
             throw new Error('Unexpected success');
           })
-          .catch(function(err) {
+          .catch(function (err) {
             expect(err.message).toContain('no signed files were found');
             expect(stubs.request).not.toHaveBeenCalled();
           });
       });
 
-      it('allows partially signed files', function() {
+      it('allows partially signed files', function () {
         const stubs = getDownloadStubs();
         stubs.files.push({
           signed: false,
@@ -676,7 +676,7 @@ describe(__filename, () => {
         });
       });
 
-      it('handles download errors', function() {
+      it('handles download errors', function () {
         const stubs = getDownloadStubs();
 
         const errorResponse = {
@@ -718,16 +718,16 @@ describe(__filename, () => {
       });
     });
 
-    describe('debugging', function() {
+    describe('debugging', function () {
       let fakeLog;
 
-      beforeEach(function() {
+      beforeEach(function () {
         fakeLog = {
           log: jest.fn(),
         };
       });
 
-      it('can be configured for debug output', function() {
+      it('can be configured for debug output', function () {
         const cli = new amoClient.Client({
           debugLogging: true,
           logger: fakeLog,
@@ -742,7 +742,7 @@ describe(__filename, () => {
         );
       });
 
-      it('hides debug output by default', function() {
+      it('hides debug output by default', function () {
         const cli = new amoClient.Client({
           logger: fakeLog,
         });
@@ -752,7 +752,7 @@ describe(__filename, () => {
         expect(fakeLog.log).not.toHaveBeenCalled();
       });
 
-      it('redacts authorization headers', function() {
+      it('redacts authorization headers', function () {
         const cli = new amoClient.Client({
           debugLogging: true,
           logger: fakeLog,
@@ -777,7 +777,7 @@ describe(__filename, () => {
         );
       });
 
-      it('redacts set-cookie headers', function() {
+      it('redacts set-cookie headers', function () {
         const cli = new amoClient.Client({
           debugLogging: true,
           logger: fakeLog,
@@ -802,7 +802,7 @@ describe(__filename, () => {
         );
       });
 
-      it('redacts cookie headers', function() {
+      it('redacts cookie headers', function () {
         const cli = new amoClient.Client({
           debugLogging: true,
           logger: fakeLog,
@@ -827,7 +827,7 @@ describe(__filename, () => {
         );
       });
 
-      it('handles null objects', function() {
+      it('handles null objects', function () {
         const cli = new amoClient.Client({
           debugLogging: true,
           logger: fakeLog,
@@ -836,7 +836,7 @@ describe(__filename, () => {
         cli.debug('prefix', null);
       });
 
-      it('preserves redacted objects', function() {
+      it('preserves redacted objects', function () {
         const cli = new amoClient.Client({
           debugLogging: true,
           logger: fakeLog,
@@ -853,14 +853,14 @@ describe(__filename, () => {
       });
     });
 
-    describe('requests', function() {
+    describe('requests', function () {
       let client;
 
-      beforeEach(function() {
+      beforeEach(function () {
         client = createClient();
       });
 
-      it('makes requests with an auth token', function() {
+      it('makes requests with an auth token', function () {
         const request = { url: '/somewhere' };
 
         return client.get(request).then(() => {
@@ -884,7 +884,7 @@ describe(__filename, () => {
         });
       });
 
-      it('lets you configure the jwt expiration', function() {
+      it('lets you configure the jwt expiration', function () {
         const expiresIn = 60 * 15; // 15 minutes
         const cli = createClient({
           apiJwtExpiresIn: expiresIn,
@@ -909,7 +909,7 @@ describe(__filename, () => {
         );
       });
 
-      it('configures a default jwt expiration', function() {
+      it('configures a default jwt expiration', function () {
         const defaultExpiry = 60 * 5; // 5 minutes
         const cli = createClient();
 
@@ -931,7 +931,7 @@ describe(__filename, () => {
         );
       });
 
-      it('lets you configure a request directly', function() {
+      it('lets you configure a request directly', function () {
         const conf = client.configureRequest({ url: '/path' });
         expect(conf).toHaveProperty('headers');
         expect(conf).toHaveProperty('timeout');
@@ -940,7 +940,7 @@ describe(__filename, () => {
         expect(conf.headers).toHaveProperty('Authorization');
       });
 
-      it('preserves request headers', function() {
+      it('preserves request headers', function () {
         const headers = { 'X-Custom': 'thing' };
         const conf = client.configureRequest({
           url: '/path',
@@ -949,7 +949,7 @@ describe(__filename, () => {
         expect(conf.headers['X-Custom']).toEqual('thing');
       });
 
-      it('allows you to override request headers', function() {
+      it('allows you to override request headers', function () {
         const headers = { Accept: 'text/html' };
         const conf = client.configureRequest({
           url: '/path',
@@ -958,19 +958,19 @@ describe(__filename, () => {
         expect(conf.headers.Accept).toEqual('text/html');
       });
 
-      it('makes relative URLs absolute', function() {
+      it('makes relative URLs absolute', function () {
         const urlPath = '/somewhere';
         const conf = client.configureRequest({ url: urlPath });
         expect(conf.url).toEqual(defaultApiUrlPrefix + urlPath);
       });
 
-      it('accepts absolute URLs', function() {
+      it('accepts absolute URLs', function () {
         const absUrl = 'http://some-site/somewhere';
         const conf = client.configureRequest({ url: absUrl });
         expect(conf.url).toEqual(absUrl);
       });
 
-      it('can make any HTTP request', function() {
+      it('can make any HTTP request', function () {
         const requests = [];
         ['get', 'put', 'post', 'patch', 'delete'].forEach((method) => {
           const urlPath = '/some/path';
@@ -987,7 +987,7 @@ describe(__filename, () => {
         return Promise.all(requests);
       });
 
-      it('configures a request timeout based on JWT expiration', function() {
+      it('configures a request timeout based on JWT expiration', function () {
         // Set a custom JWT expiration:
         const expiresIn = 60 * 15; // 15 minutes
         const cli = createClient({
@@ -1001,55 +1001,55 @@ describe(__filename, () => {
         expect(config.timeout).toBeGreaterThan(expiresIn * 1000);
       });
 
-      it('requires a URL', function() {
+      it('requires a URL', function () {
         expect(() => {
           client.configureRequest({});
         }).toThrow(Error, /URL was not specified/);
       });
 
-      it('rejects the request promise on > 200 responses', function() {
+      it('rejects the request promise on > 200 responses', function () {
         client._request = new MockRequest({
           httpResponse: { statusCode: 409 },
         });
         return client
           .get({ url: '/something' })
-          .then(function() {
+          .then(function () {
             throw new Error('unexpected success');
           })
-          .catch(function(err) {
+          .catch(function (err) {
             expect(err.message).toContain('Received bad response');
           });
       });
 
-      it('rejects the request promise on < 200 responses', function() {
+      it('rejects the request promise on < 200 responses', function () {
         client._request = new MockRequest({
           httpResponse: { statusCode: 122 },
         });
         return client
           .get({ url: '/something' })
-          .then(function() {
+          .then(function () {
             throw new Error('unexpected success');
           })
-          .catch(function(err) {
+          .catch(function (err) {
             expect(err.message).toContain('Received bad response');
           });
       });
 
-      it('rejects the request promise with callback error', function() {
+      it('rejects the request promise with callback error', function () {
         const callbackError = new Error('some error');
         client._request = new MockRequest({ responseError: callbackError });
 
         return client
           .get({ url: '/something' })
-          .then(function() {
+          .then(function () {
             throw new Error('unexpected success');
           })
-          .catch(function(err) {
+          .catch(function (err) {
             expect(err).toEqual(callbackError);
           });
       });
 
-      it('can be configured not to throw on a bad response status', function() {
+      it('can be configured not to throw on a bad response status', function () {
         client._request = new MockRequest({
           httpResponse: { statusCode: 409 },
         });
@@ -1062,12 +1062,12 @@ describe(__filename, () => {
               throwOnBadResponse: false,
             },
           )
-          .then(function(result) {
+          .then(function (result) {
             expect(result[0].statusCode).toEqual(409);
           });
       });
 
-      it('resolves the request promise with the HTTP response', function() {
+      it('resolves the request promise with the HTTP response', function () {
         const httpResponse = { statusCode: 201 };
         client._request = new MockRequest({ httpResponse });
 
@@ -1077,7 +1077,7 @@ describe(__filename, () => {
         });
       });
 
-      it('resolves the request promise with the response body', function() {
+      it('resolves the request promise with the response body', function () {
         const responseBody = 'some text response';
         client._request = new MockRequest({ responseBody });
 
@@ -1125,13 +1125,13 @@ describe(__filename, () => {
     });
   });
 
-  describe('formatResponse', function() {
-    it('should dump JSON objects', function() {
+  describe('formatResponse', function () {
+    it('should dump JSON objects', function () {
       const res = amoClient.formatResponse({ error: 'some error' });
       expect(res).toEqual('{"error":"some error"}');
     });
 
-    it('should truncate long JSON', function() {
+    it('should truncate long JSON', function () {
       const res = amoClient.formatResponse(
         { error: 'pretend this is really long' },
         { maxLength: 5 },
@@ -1139,7 +1139,7 @@ describe(__filename, () => {
       expect(res).toEqual('{"err...');
     });
 
-    it('ignores broken JSON objects', function() {
+    it('ignores broken JSON objects', function () {
       const stub = jest.fn().mockImplementation(() => {
         throw new Error();
       });
@@ -1150,7 +1150,7 @@ describe(__filename, () => {
       expect(res).toEqual('[object Object]');
     });
 
-    it('should truncate long HTML', function() {
+    it('should truncate long HTML', function () {
       const res = amoClient.formatResponse(
         '<h1>pretend this is really long</h1>',
         {
@@ -1160,20 +1160,20 @@ describe(__filename, () => {
       expect(res).toEqual('<h1>prete...');
     });
 
-    it('should leave short HTML in tact', function() {
+    it('should leave short HTML in tact', function () {
       const text = '<h1>404 or whatever</h1>';
       const res = amoClient.formatResponse(text);
       expect(res).toEqual(text);
     });
   });
 
-  describe('getUrlBasename', function() {
-    it('gets a basename', function() {
+  describe('getUrlBasename', function () {
+    it('gets a basename', function () {
       const base = amoClient.getUrlBasename('http://foo.com/bar.zip');
       expect(base).toEqual('bar.zip');
     });
 
-    it('strips the query string', function() {
+    it('strips the query string', function () {
       const base = amoClient.getUrlBasename('http://foo.com/bar.zip?baz=quz');
       expect(base).toEqual('bar.zip');
     });

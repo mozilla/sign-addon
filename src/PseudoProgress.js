@@ -123,7 +123,7 @@ class PseudoProgress {
 
   fillBucket() {
     // fill the whole bucket with dots to indicate completion.
-    this.bucket = this.bucket.map(function() {
+    this.bucket = this.bucket.map(function () {
       return '.';
     });
     this.showBucket();

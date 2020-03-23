@@ -531,7 +531,7 @@ export class Client {
           .pipe(out)
           .on('error', reject);
 
-        out.on('finish', function() {
+        out.on('finish', function () {
           stdout.write('\n'); // end the progress output
           resolve(fileName);
         });
@@ -795,7 +795,7 @@ export class Client {
         return obj;
       }
       if (obj.headers) {
-        ['Authorization', 'cookie', 'set-cookie'].forEach(function(hdr) {
+        ['Authorization', 'cookie', 'set-cookie'].forEach(function (hdr) {
           if (obj.headers[hdr]) {
             // eslint-disable-next-line no-param-reassign
             obj.headers[hdr] = '<REDACTED>';
@@ -803,7 +803,7 @@ export class Client {
         });
       }
 
-      Object.keys(obj).forEach(function(key) {
+      Object.keys(obj).forEach(function (key) {
         // eslint-disable-next-line no-param-reassign
         obj[key] = redact(obj[key]);
       });
@@ -813,7 +813,7 @@ export class Client {
 
     // TODO: remove the use of `arguments`
     // eslint-disable-next-line prefer-rest-params
-    const args = Array.prototype.map.call(arguments, function(val) {
+    const args = Array.prototype.map.call(arguments, function (val) {
       let newVal = val;
       if (typeof newVal === 'object') {
         newVal = deepcopy(newVal);
