@@ -33,12 +33,12 @@ describe(__filename, () => {
       });
     });
 
-    it('should set an interval', function() {
+    it('should set an interval', function () {
       progress.animate();
       expect(_setInterval).toHaveBeenCalled();
     });
 
-    it('should clear an interval', function() {
+    it('should clear an interval', function () {
       progress.animate();
       expect(_setInterval).toHaveBeenCalled();
       progress.finish();

@@ -67,7 +67,7 @@ signAddon({
   // The production instance of the API will be used by default.
   apiUrlPrefix: 'https://addons.mozilla.org/api/v4',
 })
-  .then(function(result) {
+  .then(function (result) {
     if (result.success) {
       console.log('The following signed files were downloaded:');
       console.log(result.downloadedFiles);
@@ -80,7 +80,7 @@ signAddon({
     }
     console.log(result.success ? 'SUCCESS' : 'FAIL');
   })
-  .catch(function(error) {
+  .catch(function (error) {
     console.error('Signing error:', error);
   });
 ```
