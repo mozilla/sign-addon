@@ -50,7 +50,7 @@
     "codecov": "3.6.5",
     "conventional-changelog-cli": "2.0.31",
     "eslint": "6.8.0",
-    "eslint-config-amo": "1.34.0",
+    "eslint-config-amo": "1.35.0",
     "eslint-config-prettier": "6.10.1",
     "eslint-plugin-amo": "1.11.0",
     "jest": "25.2.7",
