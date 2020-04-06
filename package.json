@@ -54,7 +54,7 @@
     "eslint-config-prettier": "6.10.1",
     "eslint-plugin-amo": "1.11.0",
     "jest": "25.2.7",
-    "prettier": "2.0.3",
+    "prettier": "2.0.4",
     "pretty-quick": "2.0.1",
     "rimraf": "3.0.2",
     "typescript": "3.7.5",
