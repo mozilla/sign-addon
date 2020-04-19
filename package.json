@@ -30,7 +30,7 @@
     "jsonwebtoken": "8.5.1",
     "mz": "2.7.0",
     "request": "2.88.2",
-    "source-map-support": "0.5.16",
+    "source-map-support": "0.5.17",
     "stream-to-promise": "2.2.0"
   },
   "devDependencies": {
