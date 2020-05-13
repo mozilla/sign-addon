@@ -41,7 +41,7 @@
     "@commitlint/config-conventional": "8.3.4",
     "@types/common-tags": "1.8.0",
     "@types/jest": "25.2.1",
-    "@types/jsonwebtoken": "8.3.9",
+    "@types/jsonwebtoken": "8.5.0",
     "@types/mz": "2.7.0",
     "@types/request": "2.48.4",
     "babel-eslint": "10.1.0",
