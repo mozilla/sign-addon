@@ -46,7 +46,7 @@ signAddon({
   // Save downloaded files to this directory.
   // Default: current working directory.
   downloadDir: undefined,
-  // Number of milleseconds to wait before aborting the request.
+  // Number of milliseconds to wait before aborting the request.
   // Default: 2 minutes.
   timeout: undefined,
   // Optional proxy to use for all API requests,
