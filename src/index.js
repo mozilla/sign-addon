@@ -46,7 +46,7 @@ const signAddon = async ({
   // Ignored for new add-ons, which are always unlisted.
   // Defaults to most recently used channel.
   channel,
-  // Number of milleseconds to wait before giving up on a
+  // Number of milliseconds to wait before giving up on a
   // response from Mozilla's web service.
   timeout,
   // Absolute directory to save downloaded files in.
