@@ -31,7 +31,7 @@
     "mz": "2.7.0",
     "request": "2.88.2",
     "source-map-support": "0.5.19",
-    "stream-to-promise": "2.2.0"
+    "stream-to-promise": "3.0.0"
   },
   "devDependencies": {
     "@babel/core": "7.9.6",
