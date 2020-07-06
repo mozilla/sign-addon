@@ -49,7 +49,7 @@
     "babel-loader": "8.1.0",
     "codecov": "3.7.0",
     "conventional-changelog-cli": "2.0.34",
-    "eslint": "7.3.1",
+    "eslint": "7.4.0",
     "eslint-config-amo": "3.3.0",
     "eslint-config-prettier": "6.11.0",
     "eslint-plugin-amo": "1.11.0",
