@@ -141,4 +141,4 @@ export const signAddonAndExit = async (
   }
 };
 
-export default signAddon;
+export default { signAddon, signAddonAndExit };

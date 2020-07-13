@@ -12,16 +12,18 @@
     "build": "rimraf dist/ && webpack",
     "changelog": "conventional-changelog -p angular -u",
     "changelog-lint": "commitlint --from master",
-    "eslint": "eslint .",
+    "eslint": "eslint . --ext mjs --ext js",
     "lint": "npm run eslint",
     "prettier": "prettier --write '**'",
-    "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `yarn prettier-dev` before committing\n\n' && exit 1)",
+    "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `npm run prettier-dev` before committing\n\n' && exit 1)",
     "prettier-dev": "pretty-quick --branch master",
     "test": "jest",
-    "test-ci": "yarn test --coverage && codecov",
+    "test-ci": "npm run test --coverage && codecov",
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@types/shelljs": "0.8.8",
+    "@types/tmp": "0.2.0",
     "common-tags": "1.8.0",
     "core-js": "3.6.5",
     "deepcopy": "2.0.0",
@@ -30,8 +32,10 @@
     "jsonwebtoken": "8.5.1",
     "mz": "2.7.0",
     "request": "2.88.2",
+    "shelljs": "0.8.4",
     "source-map-support": "0.5.19",
-    "stream-to-promise": "3.0.0"
+    "stream-to-promise": "3.0.0",
+    "tmp": "0.2.1"
   },
   "devDependencies": {
     "@babel/core": "7.10.5",
