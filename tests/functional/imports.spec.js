@@ -5,6 +5,8 @@ import shell from 'shelljs';
 import tmp from 'tmp';
 
 describe(__filename, () => {
+  tmp.setGracefulCleanup();
+
   const node = shell.which('node');
   const npm = shell.which('npm');
   const fixturesDir = path.join(__dirname, '..', 'fixtures');
@@ -58,7 +60,7 @@ describe(__filename, () => {
 
       execSync(`${npm} link sign-addon`, { cwd });
       shell.cp('-rf', `${fixtureCjsRequire}/*`, cwd);
-      execSync(`${node} --experimental-modules test-require.js`, { cwd });
+      execSync(`${node} test-require.js`, { cwd });
 
       cleanupCallback();
     });
