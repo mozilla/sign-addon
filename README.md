@@ -12,11 +12,7 @@ Sign a Firefox add-on with Mozilla's [web service](http://addons-server.readthed
 
 To sign add-ons, you first need to generate API credentials, a JWT issuer and secret, from the [AMO Developer Hub](https://addons.mozilla.org/en-US/developers/addon/api/key/).
 
-Currently, this is intended for use in [NodeJS](https://nodejs.org/) only and should work in version 8 or higher.
-
-## Command line use
-
-TODO: add a command line script ([issue #9](https://github.com/mozilla/sign-addon/issues/9)).
+Currently, this is intended for use in [NodeJS](https://nodejs.org/) only and should work in version 10 or higher.
 
 ## Programmatic use
 
