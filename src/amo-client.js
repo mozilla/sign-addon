@@ -88,6 +88,7 @@ import PseudoProgress from './PseudoProgress';
  */
 export function formatResponse(response, overrides = {}) {
   const options = {
+    _stringifyToJson: JSON.stringify,
     maxLength: 500,
     ...overrides,
   };
@@ -136,7 +137,7 @@ export class Client {
   /**
    * Type for `this.request()`.
    *
-   * @typedef {Promise<[Response, object]>} RequestMethodReturnValue
+   * @typedef {Promise<[Response, SigningStatus]>} RequestMethodReturnValue
    */
 
   /**
@@ -196,7 +197,13 @@ export class Client {
    * @returns {Promise<SignResult>}
    */
   sign({ guid, version, channel, xpiPath }) {
-    /** @type {object} */
+    /**
+     * @type {{
+     *   upload: defaultFs.ReadStream;
+     *   channel?: string;
+     *   version?: string;
+     * }}
+     */
     const formData = {
       upload: this._fs.createReadStream(xpiPath),
     };
@@ -235,7 +242,10 @@ export class Client {
       )
       .then(
         /**
-         * @param {[Response, object]} requestValue
+         * @param {[
+         *   Response,
+         *   { error?: string, headers?: {[name: string]: string}, url: string }
+         * ]} requestValue
          * @returns {Promise<SignResult>} result
          */
         ([httpResponse, body]) => {
@@ -788,7 +798,7 @@ export class Client {
     }
 
     /**
-     * @param {object} obj
+     * @param {{ headers: {[key: string]: string} } & {[prop: string]: any}} obj
      */
     function redact(obj) {
       if (typeof obj !== 'object' || !obj) {
