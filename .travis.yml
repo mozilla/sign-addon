@@ -1,32 +1,31 @@
 language: node_js
-sudo: false
+
 node_js:
-- 10
-- 12
+  # When updating the value below, make sure to update the `node_js` version in
+  # the `deploy` section at the bottom of this file too.
+  - 10
+  - 12
 
 before_install:
-# Create a master branch for conventional-changelog-lint
-- git remote set-branches origin master && git fetch
-- git checkout master
-# Check out the commit that TravisCI started on:
-- git checkout -
-- npm install -g npm;
+  # Create a master branch for conventional-changelog-lint
+  - git remote set-branches origin master && git fetch
+  - git checkout master
+  # Check out the commit that TravisCI started on:
+  - git checkout -
+  - npm install -g npm;
+
 script:
-- npm run build
-- npm run test-ci
-- npm run lint
-- npm run prettier-ci
-- npm run typecheck
-# Run changelog-lint but only on newer versions of Node (because of syntax errors)
-- if [[ ${TRAVIS_NODE_VERSION:0:1} -ge "8" ]]; then
-    npm run changelog-lint;
-  fi
-notifications:
-  irc:
-    channels:
-    - irc.mozilla.org#amo-bots
-    on_success: change
-    on_failure: always
+  - npm run build
+  - npm run test-ci
+  - npm run lint
+  - npm run prettier-ci
+  - npm run typecheck
+  # Run changelog-lint but only on newer versions of Node (because of syntax
+  # errors)
+  - if [[ ${TRAVIS_NODE_VERSION:0:1} -ge "8" ]]; then
+      npm run changelog-lint;
+    fi
+
 deploy:
   provider: npm
   email: addons-dev-automation+npm@mozilla.com
@@ -38,3 +37,4 @@ deploy:
     secure: OEtTl1c/grWh7YsgOJBQrkV/b3t5a13IvbNkjOf3S2HP7JDh9zhqzDZFATgHVpsX1Z6/33eh+gvJ5n4T9VF6OGdYEP40QdEnO7+uWYLEUCWQ7u2lWNRpix4opgRos/M8CJ8vPFbermb2/SnFS9B/ree7xru50pg4w51+T5lyxZnQWuXXU5S44Ywvg+p4KZq8YzkNU5VSmneQK3CTKniaVnAMlcf8p4UmCilDn5LYbjg4x5yOf4OTaup7oU2IAypgsDfYYCcOSpCuuBdGZMvC8IRDUFpQ1RCMKfOCdpX+M2ejxvVbIGVlg+OcL0+xaQtxjBAAEmbquB7+AVsnQ9I6VaENtmzMQJthWawiEqSQJISCoVwhJ87YvGol6Qdo9/7KyTn82mB2AzbxcxI6XZcjACe0qj2IGvWNPtkZ/aIwL4oc2JaeucFZOBwqs6eWiSHNQ/4pqVwzsDz4EXLtR+j+twS6ulywIIgr1u5D5Zryi5r/qCJXgH+bq3yZ65GmRd+Oz1G5xztYe/nX8z4yWkUnVDE23GlDvptytaSjGmO8yx1Bqc6ehuWgC/kx8rX+1JSfNFycDphFmuyxzAV8b/XWWbAH7i1cz60Se42cOwFtJ0zi4G87/+/GeksrRaK2T8v8eBuLWJ1eXUY6HKoXWBMVpitZfmnoV++vFSbhA+MHXNA=
   on:
     tags: true
+    node_js: 10
