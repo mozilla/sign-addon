@@ -23,7 +23,7 @@ TODO: add a command line script ([issue #9](https://github.com/mozilla/sign-addo
 Here is how to retrieve a signed version of an [XPI file](https://developer.mozilla.org/en-US/docs/Mozilla/XPI):
 
 ```javascript
-var signAddon = require('sign-addon').default;
+var { signAddon } = require('sign-addon');
 
 signAddon({
   // Required arguments:
@@ -88,7 +88,7 @@ signAddon({
 In ES6 code, you can import it more concisely:
 
 ```javascript
-import signAddon from 'sign-addon';
+import { signAddon } from 'sign-addon';
 ```
 
 ## Dealing With Extension IDs
