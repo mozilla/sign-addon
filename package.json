@@ -22,8 +22,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@types/shelljs": "0.8.8",
-    "@types/tmp": "0.2.0",
     "common-tags": "1.8.0",
     "core-js": "3.6.5",
     "deepcopy": "2.0.0",
@@ -46,6 +44,8 @@
     "@types/jsonwebtoken": "8.5.0",
     "@types/mz": "2.7.1",
     "@types/request": "2.48.5",
+    "@types/shelljs": "0.8.8",
+    "@types/tmp": "0.2.0",
     "babel-eslint": "10.1.0",
     "babel-jest": "26.1.0",
     "babel-loader": "8.1.0",
