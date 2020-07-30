@@ -62,7 +62,7 @@
     "shelljs": "0.8.4",
     "tmp": "0.2.1",
     "typescript": "3.9.7",
-    "webpack": "4.44.0",
+    "webpack": "4.44.1",
     "webpack-cli": "3.3.12",
     "webpack-node-externals": "2.5.0"
   },
