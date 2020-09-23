@@ -52,7 +52,7 @@
     "codecov": "3.7.2",
     "conventional-changelog-cli": "2.1.0",
     "eslint": "7.9.0",
-    "eslint-config-amo": "3.6.1",
+    "eslint-config-amo": "3.7.0",
     "eslint-config-prettier": "6.11.0",
     "eslint-plugin-amo": "1.11.0",
     "jest": "26.4.2",
