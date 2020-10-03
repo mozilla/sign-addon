@@ -43,7 +43,7 @@ signAddon({
   // Default: current working directory.
   downloadDir: undefined,
   // Number of milliseconds to wait before aborting the request.
-  // Default: 2 minutes.
+  // Default: 15 minutes.
   timeout: undefined,
   // Optional proxy to use for all API requests,
   // such as "http://yourproxy:6000"
