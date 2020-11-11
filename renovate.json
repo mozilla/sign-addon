@@ -18,5 +18,10 @@
       ],
       "rangeStrategy": "replace"
     }
-  ]
+  ],
+  "automerge": true,
+  "major": {
+    "automerge": false
+  },
+  "stabilityDays": 2
 }
