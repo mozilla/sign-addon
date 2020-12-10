@@ -42,7 +42,7 @@
     "@types/common-tags": "1.8.0",
     "@types/jest": "26.0.16",
     "@types/jsonwebtoken": "8.5.0",
-    "@types/mz": "2.7.2",
+    "@types/mz": "2.7.3",
     "@types/request": "2.48.5",
     "@types/shelljs": "0.8.8",
     "@types/tmp": "0.2.0",
