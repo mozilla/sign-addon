@@ -11,9 +11,8 @@
   },
   "extends": [
     "amo",
-    "prettier",
     "prettier/@typescript-eslint",
-    "plugin:jest/recommended"
+    "plugin:amo/typescript"
   ],
   "rules": {
     "import/no-extraneous-dependencies": ["error", {
@@ -27,6 +26,8 @@
     // We do not use Jest, yet
     "jest/valid-expect": "off",
     // We almost only use anonymous functions...
-    "func-names": "off"
+    "func-names": "off",
+    // We don't use .tsx files
+    "amo/only-tsx-files": "off"
   }
 }
