@@ -1,0 +1,114 @@
+# These environment variables must be set in CircleCI UI
+#
+# NPM_TOKEN - A valid NPM token for releases
+version: 2.1
+
+references:
+  defaults: &defaults
+    working_directory: ~/sign-addon
+    docker:
+      # This is the NodeJS version we run in production.
+      - image: circleci/node:10
+
+  defaults-next: &defaults-next
+    working_directory: ~/sign-addon
+    docker:
+      # This is the next NodeJS version we will support.
+      - image: circleci/node:12
+
+  restore_build_cache: &restore_build_cache
+    restore_cache:
+      name: restore npm package cache
+      keys:
+        - npm-packages-{{ checksum "package-lock.json" }}
+
+  run_npm_install: &run_npm_install
+    run:
+      name: install dependencies
+      command: npm install
+
+  save_build_cache: &save_build_cache
+    save_cache:
+      name: save npm package cache
+      key: npm-packages-{{ checksum "package-lock.json" }}
+      paths:
+        - ./node_modules
+
+  configure_global_npm: &configure_global_npm
+    run:
+      name: create custom directory for global npm installs
+      # This is required to avoid a `EACCES` when running `npm link` (which is
+      # executed in the test suite).
+      command: |
+        mkdir -p ~/.npm-global
+        npm config set prefix '~/.npm-global'
+
+jobs:
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+      - *restore_build_cache
+      - *run_npm_install
+      - *save_build_cache
+      - run:
+          name: create a master branch for conventional-changelog-lint
+          command: |
+            git remote set-branches origin master && git fetch
+            git checkout master
+            git checkout -
+      - *configure_global_npm
+      - run: npm run build
+      - run: npm run test-ci
+      - run: npm run lint
+      - run: npm run prettier-ci
+      - run: npm run typecheck
+      - run: npm run changelog-lint
+      # Set up a workspace to share data between this job and the `release-tag`
+      # one when we want to publish a new npm version.
+      - persist_to_workspace:
+          root: ~/sign-addon
+          paths: .
+      - store_artifacts:
+          path: coverage
+
+  test-next:
+    <<: *defaults-next
+    steps:
+      - checkout
+      - *restore_build_cache
+      - *run_npm_install
+      - *save_build_cache
+      - *configure_global_npm
+      - run: npm run build
+      - run: npm run test-ci
+
+  release-tag:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/sign-addon
+      - run:
+          name: authenticate with registry
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/sign-addon/.npmrc
+      - run:
+          name: publish package
+          command: npm publish
+
+workflows:
+  version: 2
+  default-workflow:
+    jobs:
+      - test:
+          filters: # required since `release-tag` has tag filters AND requires `test`
+            tags:
+              only: /.*/
+      - test-next
+      - release-tag:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
