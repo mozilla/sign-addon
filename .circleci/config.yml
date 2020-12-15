@@ -3,48 +3,61 @@
 # NPM_TOKEN - A valid NPM token for releases
 version: 2.1
 
-defaults: &defaults
-  working_directory: ~/sign-addon
-  docker:
-    # This is the NodeJS version we run in production.
-    - image: circleci/node:10
+references:
+  defaults: &defaults
+    working_directory: ~/sign-addon
+    docker:
+      # This is the NodeJS version we run in production.
+      - image: circleci/node:10
 
-defaults-next: &defaults-next
-  working_directory: ~/sign-addon
-  docker:
-    # This is the next NodeJS version we will support.
-    - image: circleci/node:12
+  defaults-next: &defaults-next
+    working_directory: ~/sign-addon
+    docker:
+      # This is the next NodeJS version we will support.
+      - image: circleci/node:12
+
+  restore_build_cache: &restore_build_cache
+    restore_cache:
+      name: restore npm package cache
+      keys:
+        - npm-packages-{{ checksum "package-lock.json" }}
+
+  run_npm_install: &run_npm_install
+    run:
+      name: install dependencies
+      command: npm install
+
+  save_build_cache: &save_build_cache
+    save_cache:
+      name: save npm package cache
+      key: npm-packages-{{ checksum "package-lock.json" }}
+      paths:
+        - ./node_modules
+
+  configure_global_npm: &configure_global_npm
+    run:
+      name: create custom directory for global npm installs
+      # This is required to avoid a `EACCES` when running `npm link` (which is
+      # executed in the test suite).
+      command: |
+        mkdir -p ~/.npm-global
+        npm config set prefix '~/.npm-global'
 
 jobs:
   test:
     <<: *defaults
     steps:
       - checkout
-      - restore_cache:
-          name: restore npm package cache
-          keys:
-            - npm-packages-{{ checksum "package-lock.json" }}
-      - run:
-          name: install dependencies
-          command: npm install
-      - save_cache:
-          name: save npm package cache
-          key: npm-packages-{{ checksum "package-lock.json" }}
-          paths:
-            - ./node_modules
-      - run:
-          name: create custom directory for global npm installs
-          # This is required to avoid a `EACCES` when running `npm link` (which
-          # is executed in the test suite).
-          command: |
-            mkdir -p ~/.npm-global
-            npm config set prefix '~/.npm-global'
+      - *restore_build_cache
+      - *run_npm_install
+      - *save_build_cache
       - run:
           name: create a master branch for conventional-changelog-lint
           command: |
             git remote set-branches origin master && git fetch
             git checkout master
             git checkout -
+      - *configure_global_npm
       - run: npm run build
       - run: npm run test-ci
       - run: npm run lint
@@ -63,25 +76,10 @@ jobs:
     <<: *defaults-next
     steps:
       - checkout
-      - restore_cache:
-          name: restore npm package cache
-          keys:
-            - npm-packages-{{ checksum "package-lock.json" }}
-      - run:
-          name: install dependencies
-          command: npm install
-      - save_cache:
-          name: save npm package cache
-          key: npm-packages-{{ checksum "package-lock.json" }}
-          paths:
-            - ./node_modules
-      - run:
-          name: create custom directory for global npm installs
-          # This is required to avoid a `EACCES` when running `npm link` (which
-          # is executed in the test suite).
-          command: |
-            mkdir -p ~/.npm-global
-            npm config set prefix '~/.npm-global'
+      - *restore_build_cache
+      - *run_npm_install
+      - *save_build_cache
+      - *configure_global_npm
       - run: npm run build
       - run: npm run test-ci
 
