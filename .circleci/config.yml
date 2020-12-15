@@ -43,6 +43,19 @@ references:
         mkdir -p ~/.npm-global
         npm config set prefix '~/.npm-global'
 
+  restore_next_build_cache: &restore_next_build_cache
+    restore_cache:
+      name: restore npm package cache
+      keys:
+        - next-npm-packages-{{ checksum "package-lock.json" }}
+
+  save_next_build_cache: &save_next_build_cache
+    save_cache:
+      name: save npm package cache
+      key: next-npm-packages-{{ checksum "package-lock.json" }}
+      paths:
+        - ./node_modules
+
 jobs:
   test:
     <<: *defaults
@@ -76,9 +89,9 @@ jobs:
     <<: *defaults-next
     steps:
       - checkout
-      - *restore_build_cache
+      - *restore_next_build_cache
       - *run_npm_install
-      - *save_build_cache
+      - *save_next_build_cache
       - *configure_global_npm
       - run: npm run build
       - run: npm run test-ci
