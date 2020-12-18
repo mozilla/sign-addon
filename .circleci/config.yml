@@ -103,7 +103,7 @@ jobs:
           at: ~/sign-addon
       - run:
           name: authenticate with registry
-          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/sign-addon/.npmrc
+          command: echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > ~/sign-addon/.npmrc
       - run:
           name: publish package
           command: npm publish
