@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "common-tags": "1.8.0",
-    "core-js": "3.10.1",
+    "core-js": "3.10.2",
     "deepcopy": "2.1.0",
     "es6-error": "4.1.1",
     "es6-promisify": "6.1.1",
