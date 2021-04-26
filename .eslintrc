@@ -11,8 +11,8 @@
   },
   "extends": [
     "amo",
-    "prettier/@typescript-eslint",
-    "plugin:amo/typescript"
+    "plugin:amo/typescript",
+    "prettier"
   ],
   "rules": {
     "import/no-extraneous-dependencies": ["error", {
