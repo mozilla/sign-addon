@@ -8,13 +8,13 @@ references:
     working_directory: ~/sign-addon
     docker:
       # This is the NodeJS version we run in production.
-      - image: circleci/node:12
+      - image: circleci/node:15
 
   defaults-next: &defaults-next
     working_directory: ~/sign-addon
     docker:
       # This is the next NodeJS version we will support.
-      - image: circleci/node:14
+      - image: circleci/node:15
 
   restore_build_cache: &restore_build_cache
     restore_cache:
