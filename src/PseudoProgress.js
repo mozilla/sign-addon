@@ -6,6 +6,8 @@
  * }} Stdout
  */
 
+import { initParams } from 'request';
+
 /**
  * A pseudo progress indicator.
  *
@@ -19,15 +21,18 @@ class PseudoProgress {
    * @property {string=} preamble
    * @property {typeof clearInterval=} _clearInterval
    * @property {Stdout=} stdout
+   * @property {string=} proOptions;
    * @property {typeof setInterval=} _setInterval
-   *
    * @param {PseudoProgressParams} params
+   *
    */
   constructor({
     _clearInterval = clearInterval,
     _setInterval = setInterval,
+
     preamble = '',
     stdout = process.stdout,
+    proOptions = '',
   } = {}) {
     this.interval = null;
     this.motionCounter = 1;
@@ -42,13 +47,22 @@ class PseudoProgress {
     this.emptyBucketPointers = [];
 
     this.setPreamble(preamble);
+    this.setProOptions(proOptions);
+  }
+
+  /**
+   * @param {string} proOptions
+   */
+
+  setProOptions(proOptions) {
+    this.proOptions = `${proOptions}`;
   }
 
   /**
    * @param {string} preamble
    */
   setPreamble(preamble) {
-    this.preamble = `${preamble} [`;
+    this.preamble = `${preamble} `;
     this.addendum = ']';
 
     let shellWidth = 80;
@@ -140,9 +154,13 @@ class PseudoProgress {
   }
 
   showBucket() {
-    this.stdout.write(
-      `\r${this.preamble}${this.bucket.join('')}${this.addendum}`,
-    );
+    if (this.proOptions == 'p') {
+      this.stdout.write(`\r${this.preamble}`);
+    } else {
+      this.stdout.write(
+        `\r${this.preamble}${this.bucket.join('')}${this.addendum}`,
+      );
+    }
   }
 }
 

@@ -1,0 +1,6 @@
+{
+    "manifest_version": 2,
+    "version": "1.0",
+    "description": "A test extension from webext-generator.",
+    "name": "cobster-loraboon-giraccork"
+}
