@@ -1,8 +1,6 @@
 var { signAddon } = require('./dist/sign-addon.js');
 
-var x = process.argv[2];
-console.log(x);
-
+console.log('this is in run ' + x);
 signAddon({
   xpiPath: 'cobster-loraboon-giraccork.zip',
   version: '1.0',
@@ -10,7 +8,6 @@ signAddon({
   apiSecret: 'd8437863d47de4918ce4d6e631a2ff18b872327f796dae62187e94f519d86a83',
   apiUrlPrefix: 'https://addons-dev.allizom.org/api/v4',
   quiet: true,
-  progOption: x,
 })
   .then(function (result) {
     if (result.success) {

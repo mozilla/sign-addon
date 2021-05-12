@@ -54,7 +54,6 @@ import PseudoProgress from './PseudoProgress';
  * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
  * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
  * @property {PseudoProgress=} progressBar
- * @property {string=} progOption - Optional parameter for progress bar
  */
 
 /**
@@ -168,7 +167,6 @@ export class Client {
     proxyServer,
     requestConfig,
     progressBar,
-    progOption,
   }) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
@@ -181,14 +179,12 @@ export class Client {
     this.downloadDir = downloadDir;
     this.proxyServer = proxyServer;
     this.requestConfig = requestConfig || {};
-    this.progOption = progOption;
 
     // Set up external dependencies, allowing for overrides.
     this._progressBar =
       progressBar ||
       new PseudoProgress({
         preamble: 'Validating add-on',
-        proOptions: progOption,
       });
     this._fs = fs;
     this._request = request;

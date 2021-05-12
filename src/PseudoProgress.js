@@ -21,7 +21,6 @@ class PseudoProgress {
    * @property {string=} preamble
    * @property {typeof clearInterval=} _clearInterval
    * @property {Stdout=} stdout
-   * @property {string=} proOptions;
    * @property {typeof setInterval=} _setInterval
    * @param {PseudoProgressParams} params
    *
@@ -32,7 +31,6 @@ class PseudoProgress {
 
     preamble = '',
     stdout = process.stdout,
-    proOptions = '',
   } = {}) {
     this.interval = null;
     this.motionCounter = 1;
@@ -47,15 +45,11 @@ class PseudoProgress {
     this.emptyBucketPointers = [];
 
     this.setPreamble(preamble);
-    this.setProOptions(proOptions);
+    this.setProOptions();
   }
 
-  /**
-   * @param {string} proOptions
-   */
-
-  setProOptions(proOptions) {
-    this.proOptions = `${proOptions}`;
+  setProOptions() {
+    this.proOptions = process.argv[2];
   }
 
   /**
@@ -154,7 +148,7 @@ class PseudoProgress {
   }
 
   showBucket() {
-    if (this.proOptions == 'p') {
+    if (this.proOptions == 'n') {
       this.stdout.write(`\r${this.preamble}`);
     } else {
       this.stdout.write(
