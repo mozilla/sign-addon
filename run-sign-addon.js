@@ -1,6 +1,5 @@
 var { signAddon } = require('./dist/sign-addon.js');
 
-console.log('this is in run ' + x);
 signAddon({
   xpiPath: 'cobster-loraboon-giraccork.zip',
   version: '1.0',
