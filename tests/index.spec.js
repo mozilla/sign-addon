@@ -1,3 +1,4 @@
+/* eslint jest/no-conditional-expect: 0 */
 import path from 'path';
 
 import { signAddonAndExit } from '../src';
