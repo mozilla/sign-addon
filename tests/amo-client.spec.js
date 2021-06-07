@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint jest/no-conditional-expect: 0 */
 import path from 'path';
 
 import jwt from 'jsonwebtoken';
