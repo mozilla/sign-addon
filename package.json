@@ -53,7 +53,7 @@
     "conventional-changelog-cli": "2.1.1",
     "eslint": "7.29.0",
     "eslint-config-amo": "4.8.0",
-    "eslint-plugin-amo": "1.16.0",
+    "eslint-plugin-amo": "1.17.0",
     "jest": "27.0.4",
     "prettier": "2.3.1",
     "pretty-quick": "3.1.1",
