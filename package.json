@@ -44,7 +44,7 @@
     "@types/jsonwebtoken": "8.5.3",
     "@types/mz": "2.7.3",
     "@types/request": "2.48.5",
-    "@types/shelljs": "0.8.8",
+    "@types/shelljs": "0.8.9",
     "@types/tmp": "0.2.1",
     "babel-eslint": "10.1.0",
     "babel-jest": "27.0.6",
