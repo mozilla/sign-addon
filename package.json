@@ -43,7 +43,7 @@
     "@types/jest": "26.0.24",
     "@types/jsonwebtoken": "8.5.4",
     "@types/mz": "2.7.4",
-    "@types/request": "2.48.5",
+    "@types/request": "2.48.6",
     "@types/shelljs": "0.8.9",
     "@types/tmp": "0.2.1",
     "babel-eslint": "10.1.0",
