@@ -24,6 +24,7 @@ describe(__filename, () => {
 
     beforeEach(() => {
       _clearInterval = jest.fn();
+      // @ts-ignore: it's probably fine to not have __promisify__ here.
       _setInterval = jest.fn().mockReturnValue(fakeIntervalId);
 
       progress = new PseudoProgress({
