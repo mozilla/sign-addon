@@ -215,6 +215,16 @@ describe(__filename, () => {
       );
     });
 
+    it('passes disableProgressBar to the AMO client', async () => {
+      const disableProgressBar = true;
+
+      await runSignCmd({ cmdOptions: { disableProgressBar } });
+
+      expect(fakeClientContructor).toHaveBeenCalledWith(
+        expect.objectContaining({ disableProgressBar }),
+      );
+    });
+
     it('passes custom XPI to the signer', async () => {
       const xpiPath = path.join(fixturePath, 'simple-addon.xpi');
 
