@@ -51,7 +51,7 @@
     "babel-loader": "8.2.2",
     "codecov": "3.8.3",
     "conventional-changelog-cli": "2.1.1",
-    "eslint": "7.31.0",
+    "eslint": "7.32.0",
     "eslint-config-amo": "4.8.0",
     "eslint-plugin-amo": "1.17.0",
     "jest": "27.0.6",
