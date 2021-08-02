@@ -22,6 +22,7 @@ import { Client as DefaultAMOClient } from './amo-client';
  * @property {ClientParams['proxyServer']=} apiProxy
  * @property {ClientParams['requestConfig']=} apiRequestConfig
  * @property {typeof DefaultAMOClient=} AMOClient
+ * @property {ClientParams['disableProgressBar']=} disableProgressBar
  *
  * @param {SignAddonParams} params
  */
@@ -57,6 +58,8 @@ const signAddon = async ({
   // Optional object to pass into request() for additional configuration.
   // Not all properties are guaranteed to be applied.
   apiRequestConfig,
+  // Optional boolean passed to the AMO client to disable the progress bar.
+  disableProgressBar = false,
   AMOClient = DefaultAMOClient,
 }) => {
   /**
@@ -102,6 +105,7 @@ const signAddon = async ({
     statusCheckTimeout: timeout,
     proxyServer: apiProxy,
     requestConfig: apiRequestConfig,
+    disableProgressBar,
   });
 
   return client.sign({
