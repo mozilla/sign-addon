@@ -1124,6 +1124,22 @@ describe(__filename, () => {
         expect(typeof result).toEqual('string');
       });
     });
+
+    describe('progressBar', () => {
+      it('is enabled by default', () => {
+        const cli = createClient();
+
+        // This is an instance of `MockProgress` because it is the instance
+        // injected in `createClient()`.
+        expect(cli._progressBar).toBeInstanceOf(MockProgress);
+      });
+
+      it('can be disabled', () => {
+        const cli = createClient({ disableProgressBar: true });
+
+        expect(cli._progressBar).toEqual(undefined);
+      });
+    });
   });
 
   describe('formatResponse', function () {

@@ -54,6 +54,7 @@ import PseudoProgress from './PseudoProgress';
  * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
  * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
  * @property {PseudoProgress=} progressBar
+ * @property {boolean=} disableProgressBar - When true, disables progress bar
  */
 
 /**
@@ -167,6 +168,7 @@ export class Client {
     proxyServer,
     requestConfig,
     progressBar,
+    disableProgressBar = false,
   }) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
@@ -181,11 +183,13 @@ export class Client {
     this.requestConfig = requestConfig || {};
 
     // Set up external dependencies, allowing for overrides.
-    this._progressBar =
-      progressBar ||
-      new PseudoProgress({
-        preamble: 'Validating add-on',
-      });
+    if (!disableProgressBar) {
+      this._progressBar =
+        progressBar ||
+        new PseudoProgress({
+          preamble: 'Validating add-on',
+        });
+    }
     this._fs = fs;
     this._request = request;
   }
@@ -315,7 +319,7 @@ export class Client {
 
       /** @type {NodeJS.Timer} */
       const abortTimeout = _setAbortTimeout(() => {
-        this._progressBar.finish();
+        this._progressBar?.finish();
         _clearTimeout(statusCheckTimeout);
 
         reject(
@@ -352,7 +356,7 @@ export class Client {
           const requiresManualReview = status.valid && !canBeAutoSigned;
 
           if (signedAndReady || requiresManualReview) {
-            this._progressBar.finish();
+            this._progressBar?.finish();
             _clearTimeout(abortTimeout);
 
             if (requiresManualReview) {
@@ -402,11 +406,11 @@ export class Client {
           lastStatus = status;
 
           if (status.processed) {
-            this._progressBar.finish();
+            this._progressBar?.finish();
             this.logger.log('Validation results:', status.validation_url);
             // Update pseudo progress preamble for the signing step.
-            this._progressBar.setPreamble('Signing add-on');
-            this._progressBar.animate();
+            this._progressBar?.setPreamble('Signing add-on');
+            this._progressBar?.animate();
 
             if (status.valid) {
               checkSignedStatus();
@@ -439,7 +443,7 @@ export class Client {
       };
 
       // Goooo
-      this._progressBar.animate();
+      this._progressBar?.animate();
       checkValidationStatus();
     });
   }
