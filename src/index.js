@@ -133,7 +133,7 @@ export const signAddonAndExit = async (
     const result = await signAddon(options);
     logger.log(result.success ? 'SUCCESS' : 'FAIL');
     systemProcess.exit(result.success ? 0 : 1);
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     logger.error('FAIL');
 
     if (throwError) {
