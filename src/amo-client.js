@@ -322,7 +322,7 @@ export class Client {
         reject(
           new Error(oneLine`Signing is still pending, you will receive an email
             once there is an update on the status of your submission. If you
-            don’t see the email within 24 hours, please check your Spam
+            don’t see the email after 24 hours, please check your Spam
             folder.`),
         );
       }, this.statusCheckTimeout);
