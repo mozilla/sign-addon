@@ -310,9 +310,6 @@ export class Client {
       _setStatusCheckTimeout = setTimeout,
     } = {},
   ) {
-    /** @type {SigningStatus=} */
-    let lastStatus;
-
     return new Promise((resolve, reject) => {
       /** @type {NodeJS.Timer} */
       let statusCheckTimeout;
@@ -323,8 +320,10 @@ export class Client {
         _clearTimeout(statusCheckTimeout);
 
         reject(
-          new Error(oneLine`Signing took too long to complete; last status:
-            ${formatResponse(lastStatus || '[null]')}`),
+          new Error(oneLine`Signing is still pending, you will receive an email
+            once there is an update on the status of your submission. If you
+            don’t see the email after 24 hours, please check your Spam
+            folder.`),
         );
       }, this.statusCheckTimeout);
 
@@ -339,8 +338,6 @@ export class Client {
             httpResponse,
             status,
           ] = await this.get({ url: statusUrl });
-          lastStatus = status;
-
           const canBeAutoSigned = status.automated_signing;
           // The add-on passed validation and all files have been created. There
           // are many checks for this state because the data will be updated
@@ -403,8 +400,6 @@ export class Client {
             httpResponse,
             status,
           ] = await this.get({ url: statusUrl });
-          lastStatus = status;
-
           if (status.processed) {
             this._progressBar?.finish();
             this.logger.log('Validation results:', status.validation_url);

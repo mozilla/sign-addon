@@ -449,7 +449,8 @@ describe(__filename, () => {
             throw new Error('Unexpected success');
           })
           .catch((error) => {
-            expect(error.message).toContain('Signing took too long');
+            expect(error.message).toContain('Signing is still pending');
+            expect(error.message).toContain('you will receive an email');
           });
 
         expect(_clearTimeout).toHaveBeenCalledWith('status-check-timeout-id');
@@ -474,9 +475,10 @@ describe(__filename, () => {
           .then(() => {
             throw new Error('Unexpected success');
           })
-          .catch((error) =>
-            expect(error.message).toContain('Signing took too long'),
-          );
+          .catch((error) => {
+            expect(error.message).toContain('Signing is still pending');
+            expect(error.message).toContain('you will receive an email');
+          });
       });
 
       it('can use a request proxy', function () {
