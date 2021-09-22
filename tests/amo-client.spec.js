@@ -450,6 +450,7 @@ describe(__filename, () => {
           })
           .catch((error) => {
             expect(error.message).toContain('Signing is still pending');
+            expect(error.message).toContain('you will receive an email');
           });
 
         expect(_clearTimeout).toHaveBeenCalledWith('status-check-timeout-id');
@@ -476,6 +477,7 @@ describe(__filename, () => {
           })
           .catch((error) => {
             expect(error.message).toContain('Signing is still pending');
+            expect(error.message).toContain('you will receive an email');
           });
       });
 
