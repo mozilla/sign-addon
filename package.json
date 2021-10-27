@@ -18,7 +18,7 @@
     "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `npm run prettier-dev` before committing\n\n' && exit 1)",
     "prettier-dev": "pretty-quick --branch master",
     "test": "jest",
-    "test-ci": "npm run test --coverage && codecov",
+    "test-ci": "npm run test -- --coverage",
     "typecheck": "tsc"
   },
   "dependencies": {
@@ -49,7 +49,6 @@
     "babel-eslint": "10.1.0",
     "babel-jest": "27.3.1",
     "babel-loader": "8.2.3",
-    "codecov": "3.8.3",
     "conventional-changelog-cli": "2.1.1",
     "eslint": "7.32.0",
     "eslint-config-amo": "4.11.0",
