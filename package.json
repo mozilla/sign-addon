@@ -18,7 +18,7 @@
     "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `npm run prettier-dev` before committing\n\n' && exit 1)",
     "prettier-dev": "pretty-quick --branch master",
     "test": "jest",
-    "test-ci": "npm run test --coverage",
+    "test-ci": "npm run test -- --coverage",
     "typecheck": "tsc"
   },
   "dependencies": {
