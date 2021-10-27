@@ -3,6 +3,9 @@
 # NPM_TOKEN - A valid NPM token for releases
 version: 2.1
 
+orbs:
+  codecov: codecov/codecov@3.2.0
+
 references:
   defaults: &defaults
     working_directory: ~/sign-addon
@@ -73,6 +76,7 @@ jobs:
       - *configure_global_npm
       - run: npm run build
       - run: npm run test-ci
+      - codecov/upload
       - run: npm run lint
       - run: npm run prettier-ci
       - run: npm run typecheck
