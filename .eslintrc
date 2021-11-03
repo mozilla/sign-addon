@@ -1,5 +1,5 @@
 {
-  "parser": "babel-eslint",
+  "parser": "@babel/eslint-parser",
   "env": {
     "node": true,
     "es6": true
@@ -10,7 +10,7 @@
     "require": false
   },
   "extends": [
-    "amo",
+    "amo/base",
     "plugin:amo/typescript",
     "prettier"
   ],
