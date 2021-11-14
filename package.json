@@ -22,7 +22,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "common-tags": "1.8.0",
+    "common-tags": "1.8.1",
     "core-js": "3.19.1",
     "deepcopy": "2.1.0",
     "es6-error": "4.1.1",
