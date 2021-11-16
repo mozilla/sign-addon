@@ -45,6 +45,7 @@ describe(__filename, () => {
       });
     });
 
+    // eslint-disable-next-line jest/expect-expect
     it('can be imported as an ESM module', async () => {
       const [cwd, cleanupCallback] = await makeTempDir();
 
@@ -55,6 +56,7 @@ describe(__filename, () => {
       cleanupCallback();
     });
 
+    // eslint-disable-next-line jest/expect-expect
     it('can be imported as a CommonJS module', async () => {
       const [cwd, cleanupCallback] = await makeTempDir();
 

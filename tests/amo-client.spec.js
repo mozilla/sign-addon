@@ -835,8 +835,10 @@ describe(__filename, () => {
           debugLogging: true,
           logger: fakeLog,
         });
-        // This was throwing an error because null is an object.
-        cli.debug('prefix', null);
+        expect(() => {
+          // This was throwing an error because null is an object.
+          cli.debug('prefix', null);
+        }).not.toThrow();
       });
 
       it('preserves redacted objects', function () {
