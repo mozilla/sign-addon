@@ -1,5 +1,6 @@
 import assert from 'assert';
 
+// @ts-ignore
 // eslint-disable-next-line import/no-unresolved
 import signAddon from 'sign-addon';
 
