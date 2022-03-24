@@ -48,7 +48,7 @@
     "@types/shelljs": "0.8.11",
     "@types/tmp": "0.2.3",
     "babel-jest": "27.5.1",
-    "babel-loader": "8.2.3",
+    "babel-loader": "8.2.4",
     "conventional-changelog-cli": "2.2.2",
     "eslint": "8.11.0",
     "eslint-config-amo": "5.4.0",
