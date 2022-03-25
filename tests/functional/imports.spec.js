@@ -40,7 +40,7 @@ describe(__filename, () => {
     });
 
     afterAll(() => {
-      execSync(`${npm} unlink`, {
+      execSync(`${npm} unlink -g`, {
         cwd: path.resolve(path.join(__dirname, '..', '..')),
       });
     });
