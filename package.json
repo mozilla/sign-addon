@@ -1,6 +1,6 @@
 {
   "name": "sign-addon",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Signs a Firefox add-on using Mozilla's web service",
   "main": "dist/sign-addon.js",
   "files": [
