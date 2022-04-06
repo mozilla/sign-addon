@@ -31,7 +31,7 @@ describe(__filename, () => {
         apiUrlPrefix: defaultApiUrlPrefix,
         fs: createFakeFS(),
         progressBar: new MockProgress(),
-        request: new MockRequest(),
+        got: new MockRequest(),
         statusCheckInterval: 0,
         ...overrides,
       };
@@ -118,13 +118,13 @@ describe(__filename, () => {
         };
 
         const { files } = createSigningResponse().responseBody;
-        const fakeRequest = jest.fn().mockReturnValue(fakeResponse);
+        const fakeGot = jest.fn().mockReturnValue(fakeResponse);
         const createWriteStream = jest.fn().mockReturnValue(fakeFileWriter);
         const stdout = {
           write() {},
         };
 
-        return { files, request: fakeRequest, createWriteStream, stdout };
+        return { files, got: fakeGot, createWriteStream, stdout };
       }
 
       it('lets you sign an add-on', async () => {
@@ -136,7 +136,7 @@ describe(__filename, () => {
         const waitForSignedAddonStub = jest.fn();
         client.waitForSignedAddon = waitForSignedAddonStub;
 
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 202 },
           // Partial response like:
           // http://olympia.readthedocs.org/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
@@ -147,16 +147,16 @@ describe(__filename, () => {
 
         await sign(conf);
 
-        const putCall = client._request.calls[0];
+        const putCall = client._got.calls[0];
         expect(putCall.name).toEqual('put');
 
         const partialUrl = `/addons/${conf.guid}/versions/${conf.version}`;
         expect(putCall.conf.url).toContain(partialUrl);
-        expect(putCall.conf.formData.upload).toEqual('fake-read-stream');
+        expect(putCall.conf.form.upload).toEqual('fake-read-stream');
         // When doing a PUT, the version is in the URL not the form data.
-        expect(putCall.conf.formData.version).toEqual(undefined);
+        expect(putCall.conf.form.version).toEqual(undefined);
         // When no channel is supplied, the API is expected to use the most recent channel.
-        expect(putCall.conf.formData.channel).toEqual(undefined);
+        expect(putCall.conf.form.channel).toEqual(undefined);
 
         expect(waitForSignedAddonStub).toHaveBeenCalledWith(apiStatusUrl);
       });
@@ -170,7 +170,7 @@ describe(__filename, () => {
         const waitForSignedAddonStub = jest.fn();
         client.waitForSignedAddon = waitForSignedAddonStub;
 
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 202 },
           // Partial response like:
           // http://olympia.readthedocs.org/en/latest/topics/api/signing.html#checking-the-status-of-your-upload
@@ -181,15 +181,15 @@ describe(__filename, () => {
 
         await sign(conf);
 
-        const call = client._request.calls[0];
+        const call = client._got.calls[0];
         expect(call.name).toEqual('post');
 
         // Make sure the endpoint ends with /addons/
         expect(call.conf.url).toMatch(/\/addons\/$/);
-        expect(call.conf.formData.upload).toEqual('fake-read-stream');
-        expect(call.conf.formData.version).toEqual(conf.version);
+        expect(call.conf.form.upload).toEqual('fake-read-stream');
+        expect(call.conf.form.version).toEqual(conf.version);
         // Channel is not a valid parameter for new add-ons.
-        expect(call.conf.formData.channel).toEqual(undefined);
+        expect(call.conf.form.channel).toEqual(undefined);
 
         expect(waitForSignedAddonStub).toHaveBeenCalledWith(apiStatusUrl);
       });
@@ -199,13 +199,13 @@ describe(__filename, () => {
           channel: 'listed',
         };
         client.waitForSignedAddon = jest.fn();
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 202 },
         });
 
         await sign(conf);
 
-        expect(client._request.calls[0].conf.formData.channel).toEqual(
+        expect(client._got.calls[0].conf.form.channel).toEqual(
           'listed',
         );
       });
@@ -216,13 +216,13 @@ describe(__filename, () => {
           channel: 'listed',
         };
         client.waitForSignedAddon = jest.fn();
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 202 },
         });
 
         await sign(conf);
 
-        expect(client._request.calls[0].conf.formData.channel).toEqual(
+        expect(client._got.calls[0].conf.form.channel).toEqual(
           undefined,
         );
       });
@@ -231,7 +231,7 @@ describe(__filename, () => {
         const waitForSignedAddonStub = jest.fn();
         client.waitForSignedAddon = waitForSignedAddonStub;
 
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 409 },
           responseBody: { error: 'version already exists' },
         });
@@ -247,7 +247,7 @@ describe(__filename, () => {
       it('handles incorrect status code for error responses', function () {
         client.waitForSignedAddon = () => {};
 
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           // For some reason, the API was returning errors with a 200.
           // See https://github.com/mozilla/addons-server/issues/3097
           httpResponse: { statusCode: 200 },
@@ -262,7 +262,7 @@ describe(__filename, () => {
       });
 
       it('throws an error when signing on a 500 server response', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 500 },
         });
 
@@ -287,7 +287,7 @@ describe(__filename, () => {
             download_url: 'http://amo/the-signed-file-1.2.3.xpi',
           },
         ];
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [
             createValidationResponse({ valid: false, processed: false }),
             createValidationResponse(),
@@ -300,8 +300,8 @@ describe(__filename, () => {
         await waitForSignedAddon(statusUrl);
 
         // Expect exactly three GETs before resolution.
-        expect(client._request.calls.length).toEqual(3);
-        expect(client._request.calls[0].conf.url).toContain(statusUrl);
+        expect(client._got.calls.length).toEqual(3);
+        expect(client._got.calls[0].conf.url).toContain(statusUrl);
         expect(downloadSignedFiles).toHaveBeenCalledWith(files);
       });
 
@@ -317,7 +317,7 @@ describe(__filename, () => {
           .fn()
           .mockReturnValue(Promise.resolve({ files }));
         client.downloadSignedFiles = downloadSignedFiles;
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [
             createValidationResponse({ guid }),
             createSigningResponse({ files, guid }),
@@ -336,7 +336,7 @@ describe(__filename, () => {
           .mockReturnValue(Promise.resolve({}));
         client.downloadSignedFiles = downloadSignedFiles;
 
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [
             // This is a situation where the upload has been validated but the
             // version object has not been saved yet.
@@ -353,7 +353,7 @@ describe(__filename, () => {
         await waitForSignedAddon();
 
         // Expect exactly 3 GETs before resolution.
-        expect(client._request.calls.length).toEqual(3);
+        expect(client._got.calls.length).toEqual(3);
         expect(downloadSignedFiles).toHaveBeenCalled();
       });
 
@@ -362,7 +362,7 @@ describe(__filename, () => {
           .fn()
           .mockReturnValue(Promise.resolve({}));
         client.downloadSignedFiles = downloadSignedFiles;
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [
             createValidationResponse(),
             createSigningResponse({ files: [] }), // somehow valid & signed, but files aren"t ready yet
@@ -373,12 +373,12 @@ describe(__filename, () => {
         await waitForSignedAddon();
 
         // Expect exactly three GETs before resolution.
-        expect(client._request.calls.length).toEqual(3);
+        expect(client._got.calls.length).toEqual(3);
         expect(downloadSignedFiles).toHaveBeenCalled();
       });
 
       it('waits for failing validation', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [
             createValidationResponse({ valid: false, processed: false }),
             createValidationResponse({
@@ -391,7 +391,7 @@ describe(__filename, () => {
 
         return waitForSignedAddon().then((result) => {
           // Expect exactly two GETs before resolution.
-          expect(client._request.calls.length).toEqual(2);
+          expect(client._got.calls.length).toEqual(2);
           expect(result.success).toEqual(false);
           expect(result.errorCode).toEqual('VALIDATION_FAILED');
           expect(result.errorDetails).toEqual('http://amo/validation');
@@ -399,7 +399,7 @@ describe(__filename, () => {
       });
 
       it('passes through status check request errors', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 500 },
           responseError: new Error('error from status check URL'),
         });
@@ -414,7 +414,7 @@ describe(__filename, () => {
       });
 
       it('handles complete yet inactive addons', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [
             createValidationResponse(),
             createSigningResponse({
@@ -463,7 +463,7 @@ describe(__filename, () => {
           statusCheckTimeout: 0,
         });
 
-        _client._request = new MockRequest({
+        _client._got = new MockRequest({
           responseQueue: [
             createValidationResponse(),
             createSigningResponse({ active: false }),
@@ -487,7 +487,7 @@ describe(__filename, () => {
 
         const conf = _client.configureRequest({ url: 'http://site' });
 
-        expect(conf.proxy).toEqual(proxyServer);
+        expect(conf.agent.https.proxy + '').toEqual(proxyServer + '/');
       });
 
       it('can arbitrarily configure the request', function () {
@@ -507,7 +507,7 @@ describe(__filename, () => {
 
       it('clears abort timeout after resolution', async () => {
         const _clearTimeout = jest.fn();
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseQueue: [createValidationResponse(), createSigningResponse()],
         });
 
@@ -557,7 +557,7 @@ describe(__filename, () => {
 
         return client
           .downloadSignedFiles(files, {
-            request: fakeRequest,
+            got: fakeRequest,
             createWriteStream,
             stdout: {
               write() {},
@@ -602,7 +602,7 @@ describe(__filename, () => {
 
         return client
           .downloadSignedFiles(files, {
-            request: fakeRequest,
+            got: fakeRequest,
             createWriteStream,
             stdout: {
               write() {},
@@ -651,7 +651,7 @@ describe(__filename, () => {
           })
           .catch(function (err) {
             expect(err.message).toContain('no signed files were found');
-            expect(stubs.request).not.toHaveBeenCalled();
+            expect(stubs.got).not.toHaveBeenCalled();
           });
       });
 
@@ -670,8 +670,8 @@ describe(__filename, () => {
           expect(result.success).toEqual(true);
           expect(result.downloadedFiles).toEqual([filePath]);
 
-          expect(stubs.request).toHaveBeenCalledTimes(stubs.files.length - 1);
-          expect(stubs.request).toHaveBeenCalledWith(
+          expect(stubs.got).toHaveBeenCalledTimes(stubs.files.length - 1);
+          expect(stubs.got).toHaveBeenCalledWith(
             expect.objectContaining({
               url: stubs.files[0].download_url,
             }),
@@ -695,7 +695,7 @@ describe(__filename, () => {
         return client
           .downloadSignedFiles(stubs.files, {
             ...stubs,
-            request: () => errorResponse,
+            got: () => errorResponse,
           })
           .then(() => {
             throw new Error('Unexpected success');
@@ -708,7 +708,7 @@ describe(__filename, () => {
       describe('waitForSignedAddon', () => {
         it('rejects when there is an error in checkSignedStatus', async () => {
           const responseError = new Error('some error');
-          client._request = new MockRequest({
+          client._got = new MockRequest({
             responseQueue: [createValidationResponse(), { responseError }],
           });
 
@@ -869,7 +869,7 @@ describe(__filename, () => {
         const request = { url: '/somewhere' };
 
         return client.get(request).then(() => {
-          const call = client._request.calls[0];
+          const call = client._got.calls[0];
           const headerMatch = call.conf.headers.Authorization.match(/JWT (.*)/);
           const token = headerMatch[1];
           const data = jwt.verify(token, client.apiSecret);
@@ -982,7 +982,7 @@ describe(__filename, () => {
 
           requests.push(
             client[method]({ url: urlPath }).then(() => {
-              const call = client._request.callMap[method];
+              const call = client._got.callMap[method];
               expect(call.conf.url).toEqual(defaultApiUrlPrefix + urlPath);
               expect(call.conf.headers).toHaveProperty('Accept');
               expect(call.conf.headers).toHaveProperty('Authorization');
@@ -1003,7 +1003,7 @@ describe(__filename, () => {
 
         // Make sure the request is configured to timeout after the
         // JWT token times out.
-        expect(config.timeout).toBeGreaterThan(expiresIn * 1000);
+        expect(config.timeout.request).toBeGreaterThan(expiresIn * 1000);
       });
 
       it('requires a URL', function () {
@@ -1013,7 +1013,7 @@ describe(__filename, () => {
       });
 
       it('rejects the request promise on > 200 responses', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 409 },
         });
         return client
@@ -1027,7 +1027,7 @@ describe(__filename, () => {
       });
 
       it('rejects the request promise on < 200 responses', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 122 },
         });
         return client
@@ -1042,7 +1042,7 @@ describe(__filename, () => {
 
       it('rejects the request promise with callback error', function () {
         const callbackError = new Error('some error');
-        client._request = new MockRequest({ responseError: callbackError });
+        client._got = new MockRequest({ responseError: callbackError });
 
         return client
           .get({ url: '/something' })
@@ -1055,7 +1055,7 @@ describe(__filename, () => {
       });
 
       it('can be configured not to throw on a bad response status', function () {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           httpResponse: { statusCode: 409 },
         });
         return client
@@ -1074,7 +1074,7 @@ describe(__filename, () => {
 
       it('resolves the request promise with the HTTP response', function () {
         const httpResponse = { statusCode: 201 };
-        client._request = new MockRequest({ httpResponse });
+        client._got = new MockRequest({ httpResponse });
 
         return client.get({ url: '/something' }).then((responseResult) => {
           const returnedResponse = responseResult[0];
@@ -1084,7 +1084,7 @@ describe(__filename, () => {
 
       it('resolves the request promise with the response body', function () {
         const responseBody = 'some text response';
-        client._request = new MockRequest({ responseBody });
+        client._got = new MockRequest({ responseBody });
 
         return client.get({ url: '/something' }).then((responseResult) => {
           const returnedBody = responseResult[1];
@@ -1095,7 +1095,7 @@ describe(__filename, () => {
       it('resolves the request promise with a JSON object', async () => {
         const data = { someKey: 'some value' };
 
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseBody: JSON.stringify(data),
           httpResponse: {
             statusCode: 200,
@@ -1112,7 +1112,7 @@ describe(__filename, () => {
       });
 
       it('ignores broken JSON responses', async () => {
-        client._request = new MockRequest({
+        client._got = new MockRequest({
           responseBody: '}{', // broken JSON
           httpResponse: {
             statusCode: 200,

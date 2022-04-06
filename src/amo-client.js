@@ -5,14 +5,15 @@ import path from 'path';
 
 import deepcopy from 'deepcopy';
 import defaultJwt from 'jsonwebtoken';
-import defaultRequest from 'request';
+import defaultGot from 'got';
 import { oneLine } from 'common-tags';
 
 import PseudoProgress from './PseudoProgress';
+import {HttpsProxyAgent} from 'hpagent';
 
-/** @typedef {import("request").OptionsWithUrl} RequestConfig */
+/** @typedef {import("got").OptionsInit} RequestConfig */
 
-/** @typedef {import("request").Response} Response */
+/** @typedef {import("got").Response} Response */
 
 /**
  * @typedef {"listed" | "unlisted"} ReleaseChannel
@@ -50,9 +51,9 @@ import PseudoProgress from './PseudoProgress';
  * @property {typeof console=} logger
  * @property {string=} downloadDir - Absolute path to save downloaded files to. The working directory will be used by default
  * @property {typeof defaultFs=} fs
- * @property {typeof defaultRequest=} request
+ * @property {typeof defaultGot=} got
  * @property {string=} proxyServer - Optional proxy server to use for all requests, such as "http://yourproxy:6000"
- * @property {RequestConfig=} requestConfig - Optional configuration object to pass to request(). Not all parameters are guaranteed to be applied
+ * @property {RequestConfig=} requestConfig - Optional configuration object to pass to got(). Not all parameters are guaranteed to be applied
  * @property {PseudoProgress=} progressBar
  * @property {boolean=} disableProgressBar - When true, disables progress bar
  */
@@ -164,7 +165,7 @@ export class Client {
     logger = console,
     downloadDir = process.cwd(),
     fs = defaultFs,
-    request = defaultRequest,
+    got = defaultGot,
     proxyServer,
     requestConfig,
     progressBar,
@@ -191,7 +192,7 @@ export class Client {
         });
     }
     this._fs = fs;
-    this._request = request;
+    this._got = got;
   }
 
   /**
@@ -238,7 +239,7 @@ export class Client {
       .bind(this)(
         {
           url: addonUrl,
-          formData,
+          form: formData,
         },
         {
           throwOnBadResponse: false,
@@ -449,7 +450,7 @@ export class Client {
    * @param {File[]} signedFiles - Array of file objects returned from the API.
    * @param {{
    *   createWriteStream?: typeof defaultFs.createWriteStream,
-   *   request?: typeof defaultRequest,
+   *   got?: typeof defaultGot,
    *   stdout?: typeof process.stdout
    * }} options
    * @returns {Promise<SignResult>}
@@ -458,7 +459,7 @@ export class Client {
     signedFiles,
     {
       createWriteStream = defaultFs.createWriteStream,
-      request = this._request,
+      got = this._got,
       stdout = process.stdout,
     } = {},
   ) {
@@ -495,7 +496,7 @@ export class Client {
         const fileName = path.join(this.downloadDir, getUrlBasename(fileUrl));
         const out = createWriteStream(fileName);
 
-        request(
+        got(
           this.configureRequest({
             method: 'GET',
             url: fileUrl,
@@ -660,7 +661,7 @@ export class Client {
   /**
    * Configures a request with defaults such as authentication headers.
    *
-   * @param {RequestConfig} config - as accepted by the `request` module
+   * @param {RequestConfig} config - as accepted by the `got` module
    * @param {{ jwt?: typeof defaultJwt}} options
    * @returns {RequestConfig}
    */
@@ -679,7 +680,11 @@ export class Client {
 
     if (this.proxyServer) {
       // eslint-disable-next-line no-param-reassign
-      requestConf.proxy = this.proxyServer;
+      requestConf.agent = {
+        https: new HttpsProxyAgent({
+          proxy: this.proxyServer
+        })
+      };
     }
 
     const authToken = jwt.sign({ iss: this.apiKey }, this.apiSecret, {
@@ -690,7 +695,9 @@ export class Client {
     // Make sure the request won't time out before the JWT expires.
     // This may be useful for slow file uploads.
     // eslint-disable-next-line no-param-reassign
-    requestConf.timeout = this.apiJwtExpiresIn * 1000 + 500;
+    requestConf.timeout = {
+      request: this.apiJwtExpiresIn * 1000 + 500
+    };
 
     // eslint-disable-next-line no-param-reassign
     requestConf.headers = {
@@ -729,7 +736,7 @@ export class Client {
 
       // Get the caller, like request.get(), request.put() ...
       // @ts-ignore
-      const requestMethod = this._request[method].bind(this._request);
+      const requestMethod = this._got[method].bind(this._got);
       // Wrap the request callback in a promise. Here is an example without
       // promises:
       //

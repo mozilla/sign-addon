@@ -2,7 +2,7 @@ import { fs } from 'mz';
 
 import { Client as DefaultAMOClient } from './amo-client';
 
-/** @typedef {import("request").OptionsWithUrl} RequestConfig */
+/** @typedef {import("got").OptionsInit} RequestConfig */
 /** @typedef {import("./amo-client").ClientParams} ClientParams */
 /** @typedef {import("./amo-client").ReleaseChannel} ReleaseChannel */
 
@@ -55,7 +55,7 @@ const signAddon = async ({
   // Optional proxy to use for all API requests,
   // such as "http://yourproxy:6000"
   apiProxy,
-  // Optional object to pass into request() for additional configuration.
+  // Optional object to pass into got() for additional configuration.
   // Not all properties are guaranteed to be applied.
   apiRequestConfig,
   // Optional boolean passed to the AMO client to disable the progress bar.
