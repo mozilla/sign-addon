@@ -23,6 +23,7 @@ import { Client as DefaultAMOClient } from './amo-client';
  * @property {ClientParams['requestConfig']=} apiRequestConfig
  * @property {typeof DefaultAMOClient=} AMOClient
  * @property {ClientParams['disableProgressBar']=} disableProgressBar
+ * @property {string=} sourceArchivePath
  *
  * @param {SignAddonParams} params
  */
@@ -60,6 +61,8 @@ const signAddon = async ({
   apiRequestConfig,
   // Optional boolean passed to the AMO client to disable the progress bar.
   disableProgressBar = false,
+  // Source code .zip, .tar.gz, .tgz, .tar.bz2 archive
+  sourceArchivePath,
   AMOClient = DefaultAMOClient,
 }) => {
   /**
@@ -110,6 +113,7 @@ const signAddon = async ({
 
   return client.sign({
     xpiPath,
+    sourceArchivePath,
     guid: id,
     version,
     channel,

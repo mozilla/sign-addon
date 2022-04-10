@@ -63,6 +63,7 @@ import PseudoProgress from './PseudoProgress';
  * @property {string} version - add-on version string
  * @property {ReleaseChannel=} channel - release channel (listed or unlisted)
  * @property {string} xpiPath - path to xpi file
+ * @property {string=} sourceArchivePath - path to source archive file
  */
 
 /**
@@ -200,10 +201,11 @@ export class Client {
    * @param {SignParams} signParams
    * @returns {Promise<SignResult>}
    */
-  sign({ guid, version, channel, xpiPath }) {
+  sign({ guid, version, channel, xpiPath, sourceArchivePath }) {
     /**
      * @type {{
      *   upload: defaultFs.ReadStream;
+     *   source?: defaultFs.ReadStream;
      *   channel?: string;
      *   version?: string;
      * }}
@@ -232,6 +234,9 @@ export class Client {
             'New add-ons are always in the unlisted channel.',
         );
       }
+    }
+    if (sourceArchivePath) {
+      formData.source = this._fs.createReadStream(sourceArchivePath);
     }
 
     return httpMethod

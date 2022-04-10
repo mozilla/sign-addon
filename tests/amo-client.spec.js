@@ -210,6 +210,36 @@ describe(__filename, () => {
         );
       });
 
+      it('lets you sign an add-on with source archive', async () => {
+        const _createFakeFS = () => {
+          return {
+            createReadStream(_path) {
+              return _path === 'test-archive-path'
+                ? 'fake-archive-stream'
+                : 'fake-other-stream';
+            },
+          };
+        };
+        const _client = createClient({
+          fs: _createFakeFS(),
+        });
+        _client.waitForSignedAddon = jest.fn();
+        _client._request = new MockRequest({
+          httpResponse: { statusCode: 200 },
+        });
+        const conf = {
+          guid: 'some-guid',
+          version: 'some-version',
+          xpiPath: 'some-xpi-path',
+          sourceArchivePath: 'test-archive-path',
+        };
+        _client.sign(conf);
+
+        expect(_client._request.calls[0].conf.formData.source).toEqual(
+          'fake-archive-stream',
+        );
+      });
+
       it('lets you sign an add-on without an ID ignoring channel', async () => {
         const conf = {
           guid: null,
