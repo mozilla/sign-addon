@@ -51,7 +51,7 @@
     "babel-loader": "8.2.5",
     "conventional-changelog-cli": "2.2.2",
     "eslint": "8.14.0",
-    "eslint-config-amo": "5.4.0",
+    "eslint-config-amo": "5.5.0",
     "eslint-plugin-amo": "1.21.0",
     "jest": "27.5.1",
     "prettier": "2.6.2",
