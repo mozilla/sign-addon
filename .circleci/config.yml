@@ -37,15 +37,6 @@ references:
       paths:
         - ./node_modules
 
-  configure_global_npm: &configure_global_npm
-    run:
-      name: create custom directory for global npm installs
-      # This is required to avoid a `EACCES` when running `npm link` (which is
-      # executed in the test suite).
-      command: |
-        mkdir -p ~/.npm-global
-        npm config set prefix '~/.npm-global'
-
   restore_next_build_cache: &restore_next_build_cache
     restore_cache:
       name: restore npm package cache
@@ -73,7 +64,6 @@ jobs:
             git remote set-branches origin master && git fetch
             git checkout master
             git checkout -
-      - *configure_global_npm
       - run: npm run build
       - run: npm run test-ci
       - codecov/upload
@@ -96,7 +86,6 @@ jobs:
       - *restore_next_build_cache
       - *run_npm_install
       - *save_next_build_cache
-      - *configure_global_npm
       - run: npm run build
       - run: npm run test-ci
 
