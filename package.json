@@ -34,9 +34,9 @@
     "stream-to-promise": "3.0.0"
   },
   "devDependencies": {
-    "@babel/core": "7.17.12",
+    "@babel/core": "7.18.0",
     "@babel/eslint-parser": "7.17.0",
-    "@babel/preset-env": "7.17.12",
+    "@babel/preset-env": "7.18.0",
     "@babel/register": "7.17.7",
     "@commitlint/cli": "17.0.0",
     "@commitlint/config-conventional": "17.0.0",
