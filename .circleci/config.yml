@@ -58,19 +58,12 @@ jobs:
       - *restore_build_cache
       - *run_npm_install
       - *save_build_cache
-      - run:
-          name: create a master branch for conventional-changelog-lint
-          command: |
-            git remote set-branches origin master && git fetch
-            git checkout master
-            git checkout -
       - run: npm run build
       - run: npm run test-ci
       - codecov/upload
       - run: npm run lint
       - run: npm run prettier-ci
       - run: npm run typecheck
-      - run: npm run changelog-lint
       # Set up a workspace to share data between this job and the `release-tag`
       # one when we want to publish a new npm version.
       - persist_to_workspace:

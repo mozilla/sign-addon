@@ -10,8 +10,6 @@
   ],
   "scripts": {
     "build": "rimraf dist/ && webpack",
-    "changelog": "conventional-changelog -p angular -u",
-    "changelog-lint": "commitlint --from master",
     "eslint": "eslint . --ext mjs --ext js",
     "lint": "npm run eslint",
     "prettier": "prettier --write '**'",
@@ -38,8 +36,6 @@
     "@babel/eslint-parser": "7.18.2",
     "@babel/preset-env": "7.18.2",
     "@babel/register": "7.17.7",
-    "@commitlint/cli": "17.0.1",
-    "@commitlint/config-conventional": "17.0.0",
     "@types/common-tags": "1.8.1",
     "@types/jest": "27.5.1",
     "@types/jsonwebtoken": "8.5.8",
@@ -49,7 +45,6 @@
     "@types/tmp": "0.2.3",
     "babel-jest": "28.1.0",
     "babel-loader": "8.2.5",
-    "conventional-changelog-cli": "2.2.2",
     "eslint": "8.16.0",
     "eslint-config-amo": "5.5.0",
     "eslint-plugin-amo": "1.21.0",
@@ -68,7 +63,7 @@
     "type": "git",
     "url": "git+https://github.com/mozilla/sign-addon.git"
   },
-  "author": "Kumar McMillan",
+  "author": "Kumar McMillan and the Add-ons Team",
   "license": "MPL-2.0",
   "bugs": {
     "url": "https://github.com/mozilla/sign-addon/issues"
