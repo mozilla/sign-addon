@@ -2,20 +2,20 @@
   "name": "sign-addon",
   "version": "4.1.0",
   "description": "Signs a Firefox add-on using Mozilla's web service",
-  "main": "dist/sign-addon.js",
+  "type": "module",
+  "main": "lib/index.js",
   "files": [
-    "CODE_OF_CONDUCT.md",
-    "dist/sign-addon.*",
-    "src/**"
+    "lib/**"
   ],
   "scripts": {
-    "build": "rimraf dist/ && webpack",
+    "build": "rimraf dist/ && babel --source-maps=true src/ -d lib/",
     "eslint": "eslint . --ext mjs --ext js",
+    "jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "lint": "npm run eslint",
     "prettier": "prettier --write '**'",
     "prettier-ci": "prettier --list-different '**' || (echo '\n\nThis failure means you did not run `npm run prettier-dev` before committing\n\n' && exit 1)",
     "prettier-dev": "pretty-quick --branch master",
-    "test": "jest",
+    "test": "npm run jest",
     "test-ci": "npm run test -- --coverage",
     "typecheck": "tsc"
   },
@@ -32,10 +32,12 @@
     "stream-to-promise": "3.0.0"
   },
   "devDependencies": {
+    "@babel/cli": "7.17.10",
     "@babel/core": "7.18.2",
     "@babel/eslint-parser": "7.18.2",
     "@babel/preset-env": "7.18.2",
     "@babel/register": "7.17.7",
+    "@jest/globals": "28.1.0",
     "@types/common-tags": "1.8.1",
     "@types/jest": "27.5.1",
     "@types/jsonwebtoken": "8.5.8",
@@ -54,10 +56,7 @@
     "rimraf": "3.0.2",
     "shelljs": "0.8.5",
     "tmp": "0.2.1",
-    "typescript": "4.7.2",
-    "webpack": "5.72.1",
-    "webpack-cli": "4.9.2",
-    "webpack-node-externals": "3.0.0"
+    "typescript": "4.7.2"
   },
   "repository": {
     "type": "git",

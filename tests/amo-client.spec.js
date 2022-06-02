@@ -1,15 +1,17 @@
 // @ts-nocheck
 /* eslint jest/no-conditional-expect: 0 */
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import jwt from 'jsonwebtoken';
+import { jest } from '@jest/globals';
 
 import * as amoClient from '../src/amo-client';
 import { MockRequest, MockProgress } from './helpers';
 
 /** @typedef {import('../src/amo-client').ClientParams} ClientParams */
 
-describe(__filename, () => {
+describe(fileURLToPath(import.meta.url), () => {
   describe('Client', () => {
     const defaultApiUrlPrefix = 'http://not-a-real-amo-api.com/api/v4';
 

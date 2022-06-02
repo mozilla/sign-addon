@@ -1,6 +1,10 @@
-import PseudoProgress from '../src/PseudoProgress';
+import { fileURLToPath } from 'url';
 
-describe(__filename, () => {
+import { jest } from '@jest/globals';
+
+import PseudoProgress from '../src/PseudoProgress.js';
+
+describe(fileURLToPath(import.meta.url), () => {
   describe('PseudoProgress', () => {
     /** @type {typeof clearInterval} */
     let _clearInterval;

@@ -8,7 +8,7 @@ import defaultJwt from 'jsonwebtoken';
 import defaultRequest from 'request';
 import { oneLine } from 'common-tags';
 
-import PseudoProgress from './PseudoProgress';
+import PseudoProgress from './PseudoProgress.js';
 
 /** @typedef {import("request").OptionsWithUrl} RequestConfig */
 

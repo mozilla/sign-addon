@@ -1,7 +1,9 @@
 {
   "presets": [
     ["@babel/preset-env", {
-      "targets": { "node": "current" }
+      "targets": { "node": "14" },
+      // Leave import/export statements unchanged in the babel transpiling output.
+      "modules": false
     }]
   ]
 }

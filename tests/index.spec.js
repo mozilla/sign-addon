@@ -1,18 +1,21 @@
 /* eslint jest/no-conditional-expect: 0 */
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-import { signAddonAndExit } from '../src';
+import { jest } from '@jest/globals';
 
-const testDir = path.resolve(__dirname);
+import { signAddonAndExit } from '../src/index.js';
+
+const testDir = path.dirname(fileURLToPath(import.meta.url));
 const fixturePath = path.join(testDir, 'fixtures');
 
 /**
- * @typedef {import('../src/amo-client').ClientParams} ClientParams
- * @typedef {import('../src/amo-client').SignParams} SignParams
- * @typedef {import('../src/amo-client').SignResult} SignResult
+ * @typedef {import('../src/amo-client.js').ClientParams} ClientParams
+ * @typedef {import('../src/amo-client.js').SignParams} SignParams
+ * @typedef {import('../src/amo-client.js').SignResult} SignResult
  */
 
-describe(__filename, () => {
+describe(fileURLToPath(import.meta.url), () => {
   describe('signAddonAndExit', function () {
     /**
      * We use `any` instead of `never` because we cannot mock `never`.
@@ -21,7 +24,7 @@ describe(__filename, () => {
     let mockProcessExit;
     /** @type {typeof process} */
     let mockProcess;
-    /** @type {(params: SignParams) => SignResult} */
+    /** @type {(params: SignParams) => Promise<SignResult>} */
     let signingCall;
     /** @type {(params: ClientParams) => void} */
     let fakeClientContructor;
@@ -39,12 +42,19 @@ describe(__filename, () => {
     });
 
     /**
-     * @returns {typeof import('../src/amo-client').Client}
+     * @returns {typeof import('../src/amo-client.js').Client}
      */
     function makeAMOClientStub(overrides = {}) {
       const options = {
         errorToThrow: null,
-        result: { success: true },
+        // This should look like a `SignResult` object.
+        result: {
+          success: true,
+          id: 'some-id',
+          downloadedFiles: [],
+          errorCode: null,
+          errorDetails: '',
+        },
         ...overrides,
       };
 
@@ -59,19 +69,20 @@ describe(__filename, () => {
         // @ts-ignore
         this.debug = jest.fn();
 
-        signingCall = jest.fn().mockImplementation(
-          /**
-           * @param {SignParams} params
-           */
-          // eslint-disable-next-line no-unused-vars
-          (params) =>
-            new Promise((resolve) => {
-              if (options.errorToThrow) {
-                throw options.errorToThrow;
-              }
-              resolve(options.result);
-            }),
-        );
+        /** @type {(params: SignParams) => Promise<SignResult>} */
+        // eslint-disable-next-line no-unused-vars
+        const mockedSigningCall = (params) =>
+          new Promise((resolve) => {
+            if (options.errorToThrow) {
+              throw options.errorToThrow;
+            }
+            resolve(options.result);
+          });
+
+        /**
+         * @type {jest.Mock<(params: SignParams) => Promise<SignResult>>}
+         */
+        signingCall = jest.fn(this.sign).mockImplementation(mockedSigningCall);
 
         // `this` is not typed.
         // @ts-ignore

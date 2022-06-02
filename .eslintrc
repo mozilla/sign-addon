@@ -17,9 +17,7 @@
   "rules": {
     "import/no-extraneous-dependencies": ["error", {
         "devDependencies": [
-          "Gruntfile.js",
-          "tests/**/*.js",
-          "webpack.config.js",
+          "tests/**/*.js"
         ]
       }
     ],
@@ -28,6 +26,8 @@
     // We almost only use anonymous functions...
     "func-names": "off",
     // We don't use .tsx files
-    "amo/only-tsx-files": "off"
+    "amo/only-tsx-files": "off",
+    // Disabled due to https://github.com/import-js/eslint-plugin-import/issues/2104
+    "import/extensions": [0, "never"]
   }
 }

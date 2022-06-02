@@ -1,10 +1,10 @@
 import { fs } from 'mz';
 
-import { Client as DefaultAMOClient } from './amo-client';
+import { Client as DefaultAMOClient } from './amo-client.js';
 
 /** @typedef {import("request").OptionsWithUrl} RequestConfig */
-/** @typedef {import("./amo-client").ClientParams} ClientParams */
-/** @typedef {import("./amo-client").ReleaseChannel} ReleaseChannel */
+/** @typedef {import("./amo-client.js").ClientParams} ClientParams */
+/** @typedef {import("./amo-client.js").ReleaseChannel} ReleaseChannel */
 
 /**
  * @typedef {object} SignAddonParams
@@ -26,7 +26,7 @@ import { Client as DefaultAMOClient } from './amo-client';
  *
  * @param {SignAddonParams} params
  */
-const signAddon = async ({
+export const signAddon = async ({
   // Absolute path to add-on XPI file.
   xpiPath,
   // The add-on ID as recognized by AMO. Example: my-addon@jetpack
@@ -145,4 +145,7 @@ export const signAddonAndExit = async (
   }
 };
 
-export default { signAddon, signAddonAndExit };
+export default {
+  signAddon,
+  signAddonAndExit,
+};

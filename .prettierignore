@@ -6,7 +6,7 @@ Dockerfile
 /bin/
 /build/
 /coverage/
-/dist/
+/lib/
 /docker/
 /node_modules/
 # white-list files we want to process
