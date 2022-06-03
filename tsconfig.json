@@ -2,12 +2,11 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "esModuleInterop": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "noEmit": true,
     "strict": true,
-    "target": "es2015",
+    "target": "es2022",
     "typeRoots" : ["./node_modules/@types", "./src/@types"]
   },
   "include": ["src/", "tests/"]

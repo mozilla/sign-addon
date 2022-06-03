@@ -1,17 +1,20 @@
 import path from 'path';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
 import shell from 'shelljs';
 import tmp from 'tmp';
 
-describe(__filename, () => {
+describe(fileURLToPath(import.meta.url), () => {
   tmp.setGracefulCleanup();
 
   const node = shell.which('node');
   const npm = shell.which('npm');
-  const fixturesDir = path.join(__dirname, '..', 'fixtures');
+  const currentDirname = path.dirname(fileURLToPath(import.meta.url));
+  const fixturesDir = path.join(currentDirname, '..', 'fixtures');
   const fixtureEsmImport = path.join(fixturesDir, 'import-as-esm');
   const fixtureCjsRequire = path.join(fixturesDir, 'require-as-cjs');
+  const packageDir = path.resolve(path.join(currentDirname, '..', '..'));
 
   const makeTempDir = () =>
     new Promise((resolve, reject) => {
@@ -32,35 +35,27 @@ describe(__filename, () => {
       );
     });
 
+  beforeAll(async () => {
+    execSync(`${npm} run build`, { cwd: packageDir, stdio: 'inherit' });
+  });
+
   describe('imported as a library', () => {
-    beforeAll(() => {
-      execSync(`${npm} link`, {
-        cwd: path.resolve(path.join(__dirname, '..', '..')),
-      });
-    });
-
-    afterAll(() => {
-      execSync(`${npm} unlink -g`, {
-        cwd: path.resolve(path.join(__dirname, '..', '..')),
-      });
-    });
-
     // eslint-disable-next-line jest/expect-expect
     it('can be imported as an ESM module', async () => {
       const [cwd, cleanupCallback] = await makeTempDir();
 
-      execSync(`${npm} link sign-addon`, { cwd });
+      execSync(`${npm} install ${packageDir}`, { cwd, stdio: 'inherit' });
       shell.cp('-rf', `${fixtureEsmImport}/*`, cwd);
-      execSync(`${node} --experimental-modules test-import.mjs`, { cwd });
+      execSync(`${node} test-import.mjs`, { cwd });
 
       cleanupCallback();
     });
 
     // eslint-disable-next-line jest/expect-expect
-    it('can be imported as a CommonJS module', async () => {
+    it('can be imported as a CommonJS module dynamically', async () => {
       const [cwd, cleanupCallback] = await makeTempDir();
 
-      execSync(`${npm} link sign-addon`, { cwd });
+      execSync(`${npm} install ${packageDir}`, { cwd, stdio: 'inherit' });
       shell.cp('-rf', `${fixtureCjsRequire}/*`, cwd);
       execSync(`${node} test-require.js`, { cwd });
 

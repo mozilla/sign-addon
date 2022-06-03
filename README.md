@@ -19,7 +19,7 @@ Currently, this is intended for use in [NodeJS](https://nodejs.org/) only and sh
 Here is how to retrieve a signed version of an [XPI file](https://developer.mozilla.org/en-US/docs/Mozilla/XPI):
 
 ```javascript
-var { signAddon } = require('sign-addon');
+import { signAddon } from 'sign-addon';
 
 signAddon({
   // Required arguments:
@@ -79,12 +79,6 @@ signAddon({
   .catch(function (error) {
     console.error('Signing error:', error);
   });
-```
-
-In ES6 code, you can import it more concisely:
-
-```javascript
-import { signAddon } from 'sign-addon';
 ```
 
 ## Dealing With Extension IDs

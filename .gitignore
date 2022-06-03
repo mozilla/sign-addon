@@ -1,12 +1,6 @@
-# OSX
-.DS_Store
-
-# Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
-.grunt
-.cache
-
 # Build artifacts.
-npm-debug.log
-node_modules
-dist/*
-coverage
+/coverage/
+/lib/*
+/node_modules/
+/npm-debug.log
+/*.tgz
