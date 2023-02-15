@@ -45,7 +45,7 @@
     "@types/request": "2.48.8",
     "@types/shelljs": "0.8.11",
     "@types/tmp": "0.2.3",
-    "babel-jest": "29.4.2",
+    "babel-jest": "29.4.3",
     "babel-loader": "9.1.2",
     "eslint": "8.34.0",
     "eslint-config-amo": "5.7.0",
