@@ -32,7 +32,7 @@
     "stream-to-promise": "3.0.0"
   },
   "devDependencies": {
-    "@babel/cli": "7.20.7",
+    "@babel/cli": "7.21.0",
     "@babel/core": "7.20.12",
     "@babel/eslint-parser": "7.19.1",
     "@babel/preset-env": "7.20.2",
