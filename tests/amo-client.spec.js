@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import jwt from 'jsonwebtoken';
-import { jest } from '@jest/globals';
+import { jest, describe, beforeEach, expect, it } from '@jest/globals';
 
 import * as amoClient from '../src/amo-client';
 import { MockRequest, MockProgress } from './helpers';
