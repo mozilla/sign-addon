@@ -2,6 +2,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
+import { beforeAll, describe, it } from '@jest/globals';
 import shell from 'shelljs';
 import tmp from 'tmp';
 

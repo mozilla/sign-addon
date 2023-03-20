@@ -2,7 +2,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { jest } from '@jest/globals';
+import { jest, beforeEach, expect, describe, it } from '@jest/globals';
 
 import { signAddonAndExit } from '../src/index.js';
 

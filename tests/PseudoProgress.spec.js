@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 
-import { jest } from '@jest/globals';
+import { jest, describe, beforeEach, expect, it } from '@jest/globals';
 
 import PseudoProgress from '../src/PseudoProgress.js';
 
