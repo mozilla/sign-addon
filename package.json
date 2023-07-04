@@ -34,7 +34,7 @@
   "devDependencies": {
     "@babel/cli": "7.22.5",
     "@babel/core": "7.22.5",
-    "@babel/eslint-parser": "7.22.5",
+    "@babel/eslint-parser": "7.22.6",
     "@babel/preset-env": "7.22.5",
     "@babel/register": "7.22.5",
     "@jest/globals": "29.5.0",
