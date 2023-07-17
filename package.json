@@ -1,6 +1,6 @@
 {
   "name": "sign-addon",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "Signs a Firefox add-on using Mozilla's web service",
   "type": "module",
   "main": "lib/index.js",
