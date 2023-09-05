@@ -36,7 +36,7 @@
     "@babel/core": "7.22.11",
     "@babel/eslint-parser": "7.22.11",
     "@babel/preset-env": "7.22.15",
-    "@babel/register": "7.22.5",
+    "@babel/register": "7.22.15",
     "@jest/globals": "29.6.4",
     "@types/common-tags": "1.8.1",
     "@types/jsonwebtoken": "9.0.2",
