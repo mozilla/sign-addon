@@ -38,7 +38,7 @@
     "@babel/preset-env": "7.22.15",
     "@babel/register": "7.22.15",
     "@jest/globals": "29.6.4",
-    "@types/common-tags": "1.8.1",
+    "@types/common-tags": "1.8.2",
     "@types/jsonwebtoken": "9.0.2",
     "@types/mz": "2.7.4",
     "@types/request": "2.48.8",
