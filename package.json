@@ -42,7 +42,7 @@
     "@types/jsonwebtoken": "9.0.4",
     "@types/mz": "2.7.5",
     "@types/request": "2.48.11",
-    "@types/shelljs": "0.8.13",
+    "@types/shelljs": "0.8.14",
     "@types/tmp": "0.2.5",
     "babel-jest": "29.7.0",
     "babel-loader": "9.1.3",
