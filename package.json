@@ -40,7 +40,7 @@
     "@jest/globals": "29.7.0",
     "@types/common-tags": "1.8.2",
     "@types/jsonwebtoken": "9.0.4",
-    "@types/mz": "2.7.5",
+    "@types/mz": "2.7.6",
     "@types/request": "2.48.11",
     "@types/shelljs": "0.8.13",
     "@types/tmp": "0.2.5",
