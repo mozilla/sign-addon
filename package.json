@@ -41,7 +41,7 @@
     "@types/common-tags": "1.8.3",
     "@types/jsonwebtoken": "9.0.5",
     "@types/mz": "2.7.6",
-    "@types/request": "2.48.11",
+    "@types/request": "2.48.12",
     "@types/shelljs": "0.8.14",
     "@types/tmp": "0.2.5",
     "babel-jest": "29.7.0",
